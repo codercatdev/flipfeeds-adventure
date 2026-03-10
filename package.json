@@ -10,7 +10,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
-    "deploy": "wrangler pages deploy . --project-name=flipfeeds-adventure"
+    "deploy": "wrangler pages deploy . --project-name=flipfeeds"
   },
   "devDependencies": {
     "wrangler": "^4",
