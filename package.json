@@ -10,7 +10,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
-    "deploy": "wrangler pages deploy . --project-name=flipfeeds"
+    "deploy": "wrangler pages deploy . --project-name=flipfeeds",
+    "deploy:web": "pnpm --filter @flipfeeds/web-ui deploy",
+    "deploy:party": "pnpm --filter @flipfeeds/multiplayer-server deploy",
+    "deploy:all": "pnpm deploy:party && pnpm deploy:web"
   },
   "devDependencies": {
     "wrangler": "^4",
