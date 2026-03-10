@@ -1,0 +1,19 @@
+{
+  "name": "@flipfeeds/multiplayer-server",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "partykit dev",
+    "build": "partykit build",
+    "deploy": "partykit deploy"
+  },
+  "dependencies": {
+    "@flipfeeds/shared": "workspace:*",
+    "partykit": "^0.0.111",
+    "partysocket": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

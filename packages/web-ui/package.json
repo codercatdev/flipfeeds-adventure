@@ -1,0 +1,27 @@
+{
+  "name": "@flipfeeds/web-ui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@flipfeeds/game-client": "workspace:*",
+    "@flipfeeds/shared": "workspace:*",
+    "next": "^14.2.0",
+    "partysocket": "^1.1.16",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.4.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^10.0.3",
+    "eslint-config-next": "^16.1.6",
+    "typescript": "^5.5.0"
+  }
+}

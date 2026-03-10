@@ -1,0 +1,599 @@
+import Phaser from 'phaser';
+import eventBus from '../EventBus';
+import type { Direction, ZoneType } from '@flipfeeds/shared';
+import { NetworkManager } from '../multiplayer/NetworkManager';
+
+// Movement speed in pixels per second
+const PLAYER_SPEED = 120;
+const DIAGONAL_FACTOR = 1 / Math.SQRT2; // ~0.707
+
+export class GameScene extends Phaser.Scene {
+  // Player
+  private player!: Phaser.GameObjects.Arc;
+  private playerBody!: Phaser.Physics.Arcade.Body;
+  private currentDirection: Direction = 'idle';
+
+  // Multiplayer (Phase 3)
+  private networkManager!: NetworkManager;
+
+  // Input
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasd!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
+  private inputPaused = false;
+
+  // Map
+  private map!: Phaser.Tilemaps.Tilemap;
+  private wallsLayer!: Phaser.Tilemaps.TilemapLayer;
+
+  // Interaction zones (prep for Phase 4)
+  private zones: {
+    body: Phaser.GameObjects.Zone;
+    data: { zoneType: string; zoneId: string; radius: number };
+  }[] = [];
+  private activeZones: Set<string> = new Set();
+
+  // Zone proximity tracking
+  private proximityTimer = 0;
+  private readonly PROXIMITY_INTERVAL = 100; // 10Hz
+
+  // Debug overlay
+  private debugGraphics: Phaser.GameObjects.Graphics | null = null;
+  private debugVisible = false;
+
+  // Interaction key
+  private interactKey!: Phaser.Input.Keyboard.Key;
+  private chatKey!: Phaser.Input.Keyboard.Key;
+
+  // FPS tracking
+  private fpsHistory: number[] = [];
+  private fpsTimer = 0;
+  private readonly FPS_WINDOW = 5;
+  private readonly FPS_EMIT_INTERVAL = 1000;
+
+  constructor() {
+    super({ key: 'GameScene' });
+  }
+
+  create(): void {
+    // === Build the world ===
+    this.createTilemap();
+
+    // === Create the player ===
+    this.createPlayer();
+
+    // === Setup input ===
+    this.setupInput();
+
+    // === Setup camera ===
+    this.setupCamera();
+
+    // === Parse interaction zones (prep for Phase 4) ===
+    this.parseInteractionZones();
+
+    // === Event bridge ===
+    this.setupEventBridge();
+
+    // === Multiplayer (Phase 3) ===
+    this.networkManager = new NetworkManager(this);
+
+    // === Signal ready ===
+    eventBus.emit('GAME_READY');
+    console.log('[GameScene] Created \u2014 GAME_READY emitted');
+  }
+
+  update(_time: number, delta: number): void {
+    this.trackFPS(delta);
+
+    if (this.inputPaused) {
+      this.playerBody.setVelocity(0, 0);
+      return;
+    }
+
+    this.handleMovement();
+
+    // Phase 3: Update remote player interpolation
+    this.networkManager.updateRemotePlayers();
+
+    // Phase 4: Zone exit detection
+    this.checkZoneExits();
+
+    // Phase 4: Proximity events (throttled to 10Hz)
+    this.updateProximity(delta);
+
+    // Phase 4: Interaction key checks
+    this.checkInteractions();
+  }
+
+  // ==========================================
+  // TILEMAP
+  // ==========================================
+
+  private createTilemap(): void {
+    this.map = this.make.tilemap({ key: 'conference-map' });
+    const tileset = this.map.addTilesetImage(
+      'conference-tiles',
+      'conference-tiles',
+    );
+
+    if (!tileset) {
+      console.error('[GameScene] Failed to load tileset!');
+      return;
+    }
+
+    // Create layers in render order (depth)
+    const groundLayer = this.map.createLayer('Ground', tileset, 0, 0);
+    if (groundLayer) groundLayer.setDepth(0);
+
+    const wallsLayer = this.map.createLayer('Walls', tileset, 0, 0);
+    if (wallsLayer) {
+      wallsLayer.setDepth(1);
+      // Every non-empty tile on Walls layer is a collider
+      wallsLayer.setCollisionByExclusion([-1, 0]);
+      this.wallsLayer = wallsLayer;
+    }
+
+    const decorLayer = this.map.createLayer('Decorations', tileset, 0, 0);
+    if (decorLayer) decorLayer.setDepth(2);
+
+    // Player will be at depth 3
+
+    const aboveLayer = this.map.createLayer('AbovePlayer', tileset, 0, 0);
+    if (aboveLayer) {
+      aboveLayer.setDepth(4);
+      aboveLayer.setAlpha(0.5); // Semi-transparent for depth illusion
+    }
+
+    // Set world bounds to match map size
+    const worldWidth = this.map.widthInPixels;
+    const worldHeight = this.map.heightInPixels;
+    this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+
+    console.log(
+      `[GameScene] Tilemap loaded: ${this.map.width}x${this.map.height} tiles, ${worldWidth}x${worldHeight}px`,
+    );
+  }
+
+  // ==========================================
+  // PLAYER
+  // ==========================================
+
+  private createPlayer(): void {
+    // Get spawn point from tilemap
+    const spawnLayer = this.map.getObjectLayer('SpawnPoints');
+    let spawnX = 640; // default
+    let spawnY = 672; // default
+
+    if (spawnLayer) {
+      const spawnPoint = spawnLayer.objects.find(
+        (obj) => obj.name === 'spawn-main',
+      );
+      if (spawnPoint) {
+        spawnX = spawnPoint.x ?? spawnX;
+        spawnY = spawnPoint.y ?? spawnY;
+      }
+    }
+
+    // Placeholder player (circle) \u2014 will be replaced with sprite in future
+    this.player = this.add.circle(spawnX, spawnY, 8, 0x00ff88);
+    this.player.setDepth(3);
+
+    this.physics.add.existing(this.player);
+    this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    this.playerBody.setCollideWorldBounds(true);
+    this.playerBody.setCircle(8);
+
+    // Add collision with walls
+    if (this.wallsLayer) {
+      this.physics.add.collider(this.player, this.wallsLayer);
+    }
+
+    console.log(`[GameScene] Player spawned at (${spawnX}, ${spawnY})`);
+
+    // Emit initial position for React UI / E2E tests
+    eventBus.emit('PLAYER_POSITION', {
+      x: spawnX,
+      y: spawnY,
+      direction: 'idle' as Direction,
+    });
+  }
+
+  // ==========================================
+  // INPUT
+  // ==========================================
+
+  private setupInput(): void {
+    if (!this.input.keyboard) {
+      console.error('[GameScene] Keyboard input not available!');
+      return;
+    }
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd = {
+      W: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      A: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      S: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      D: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    };
+
+    this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.chatKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
+
+    // F9 debug toggle
+    const f9Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F9);
+    f9Key.on('down', () => {
+      this.debugVisible = !this.debugVisible;
+      this.renderDebugZones();
+      eventBus.emit('DEBUG_ZONES_TOGGLE');
+    });
+  }
+
+  private handleMovement(): void {
+    let vx = 0;
+    let vy = 0;
+
+    const up = this.cursors.up.isDown || this.wasd.W.isDown;
+    const down = this.cursors.down.isDown || this.wasd.S.isDown;
+    const left = this.cursors.left.isDown || this.wasd.A.isDown;
+    const right = this.cursors.right.isDown || this.wasd.D.isDown;
+
+    if (up) vy -= 1;
+    if (down) vy += 1;
+    if (left) vx -= 1;
+    if (right) vx += 1;
+
+    // Determine direction
+    let direction: Direction = 'idle';
+    if (vx === 0 && vy === 0) {
+      direction = 'idle';
+    } else if (vx === 0 && vy < 0) {
+      direction = 'up';
+    } else if (vx === 0 && vy > 0) {
+      direction = 'down';
+    } else if (vx < 0 && vy === 0) {
+      direction = 'left';
+    } else if (vx > 0 && vy === 0) {
+      direction = 'right';
+    } else if (vx < 0 && vy < 0) {
+      direction = 'up-left';
+    } else if (vx > 0 && vy < 0) {
+      direction = 'up-right';
+    } else if (vx < 0 && vy > 0) {
+      direction = 'down-left';
+    } else if (vx > 0 && vy > 0) {
+      direction = 'down-right';
+    }
+
+    // Normalize diagonal speed
+    const isDiagonal = vx !== 0 && vy !== 0;
+    const speed = PLAYER_SPEED;
+
+    if (isDiagonal) {
+      vx *= speed * DIAGONAL_FACTOR;
+      vy *= speed * DIAGONAL_FACTOR;
+    } else {
+      vx *= speed;
+      vy *= speed;
+    }
+
+    this.playerBody.setVelocity(vx, vy);
+    this.currentDirection = direction;
+
+    // Emit position to EventBus for React UI and server sync
+    if (direction !== 'idle') {
+      eventBus.emit('PLAYER_POSITION', {
+        x: this.player.x,
+        y: this.player.y,
+        direction: this.currentDirection,
+      });
+
+      // Send to server via EventBus → useWebSocket
+      eventBus.emit('SEND_POSITION', {
+        x: this.player.x,
+        y: this.player.y,
+        direction: this.currentDirection,
+      });
+    }
+  }
+
+  // ==========================================
+  // CAMERA
+  // ==========================================
+
+  private setupCamera(): void {
+    const camera = this.cameras.main;
+
+    // Set camera bounds to match world
+    camera.setBounds(
+      0,
+      0,
+      this.map.widthInPixels,
+      this.map.heightInPixels,
+    );
+
+    // Follow player with smooth lerp
+    camera.startFollow(this.player, true, 0.1, 0.1);
+
+    // Default zoom \u2014 2x for crisp pixel art
+    camera.setZoom(2);
+
+    console.log(
+      `[GameScene] Camera following player, zoom=2x, bounds=${this.map.widthInPixels}x${this.map.heightInPixels}`,
+    );
+  }
+
+  // ==========================================
+  // INTERACTION ZONES (Phase 4 prep)
+  // ==========================================
+
+  private parseInteractionZones(): void {
+    const zoneLayer = this.map.getObjectLayer('InteractionZones');
+    if (!zoneLayer) {
+      console.warn('[GameScene] No InteractionZones layer found');
+      return;
+    }
+
+    for (const obj of zoneLayer.objects) {
+      const props: Record<string, unknown> = {};
+      if (obj.properties) {
+        for (const prop of obj.properties as Array<{
+          name: string;
+          value: unknown;
+        }>) {
+          props[prop.name] = prop.value;
+        }
+      }
+
+      const zoneType = props['zoneType'] as string | undefined;
+      const zoneId = props['zoneId'] as string | undefined;
+      const radius = (props['radius'] as number) || 2;
+
+      if (!zoneType || !zoneId) continue;
+
+      // Create invisible zone with physics body
+      const zone = this.add.zone(
+        (obj.x ?? 0) + (obj.width ?? 0) / 2,
+        (obj.y ?? 0) + (obj.height ?? 0) / 2,
+        obj.width ?? 0,
+        obj.height ?? 0,
+      );
+      this.physics.add.existing(zone, true); // static body
+
+      const zoneData = { zoneType, zoneId, radius };
+      this.zones.push({ body: zone, data: zoneData });
+
+      // Capture zoneId for the closure
+      const capturedZoneId = zoneId;
+      const capturedZoneType = zoneType;
+
+      // Set up overlap detection (Phase 4 will emit events)
+      this.physics.add.overlap(this.player, zone, () => {
+        if (!this.activeZones.has(capturedZoneId)) {
+          this.activeZones.add(capturedZoneId);
+          const camera = this.cameras.main;
+          const screenX = (this.player.x - camera.scrollX) * camera.zoom;
+          const screenY = (this.player.y - camera.scrollY) * camera.zoom;
+          eventBus.emit('ZONE_ENTER', {
+            zoneType: capturedZoneType as ZoneType,
+            zoneId: capturedZoneId,
+            playerScreenPos: { x: screenX, y: screenY },
+          });
+          console.log(`[GameScene] Entered zone: ${capturedZoneId} (${capturedZoneType})`);
+        }
+      });
+    }
+
+    console.log(`[GameScene] Parsed ${this.zones.length} interaction zones`);
+  }
+
+  // ==========================================
+  // EVENT BRIDGE
+  // ==========================================
+
+  private setupEventBridge(): void {
+    eventBus.on('PAUSE_INPUT', () => {
+      this.inputPaused = true;
+      console.log('[GameScene] Input paused');
+    });
+
+    eventBus.on('RESUME_INPUT', () => {
+      this.inputPaused = false;
+      console.log('[GameScene] Input resumed');
+    });
+
+    // Multiplayer connection
+    eventBus.on('CONNECT', () => {
+      console.log('[GameScene] Connected to server');
+    });
+
+    this.events.on('shutdown', () => {
+      eventBus.off('PAUSE_INPUT');
+      eventBus.off('RESUME_INPUT');
+      eventBus.off('CONNECT');
+      this.networkManager.destroy();
+      console.log('[GameScene] Cleaned up event listeners');
+    });
+  }
+
+  // ==========================================
+  // ZONE EVENTS (Phase 4)
+  // ==========================================
+
+  private checkZoneExits(): void {
+    for (const zoneId of this.activeZones) {
+      const zoneEntry = this.zones.find(z => z.data.zoneId === zoneId);
+      if (!zoneEntry) continue;
+
+      // Check if player is still overlapping this zone
+      const playerBody = this.playerBody;
+      const zoneBody = zoneEntry.body.body as Phaser.Physics.Arcade.StaticBody;
+
+      const overlapping = Phaser.Geom.Intersects.RectangleToRectangle(
+        new Phaser.Geom.Rectangle(
+          playerBody.x, playerBody.y, playerBody.width, playerBody.height
+        ),
+        new Phaser.Geom.Rectangle(
+          zoneBody.x, zoneBody.y, zoneBody.width, zoneBody.height
+        )
+      );
+
+      if (!overlapping) {
+        this.activeZones.delete(zoneId);
+        eventBus.emit('ZONE_EXIT', {
+          zoneType: zoneEntry.data.zoneType as ZoneType,
+          zoneId,
+        });
+        console.log(`[GameScene] Exited zone: ${zoneId}`);
+      }
+    }
+  }
+
+  private updateProximity(delta: number): void {
+    this.proximityTimer += delta;
+    if (this.proximityTimer < this.PROXIMITY_INTERVAL) return;
+    this.proximityTimer = 0;
+
+    const camera = this.cameras.main;
+
+    for (const { body: zone, data } of this.zones) {
+      // Calculate distance from player center to zone center
+      const zoneCenterX = zone.x;
+      const zoneCenterY = zone.y;
+      const dx = this.player.x - zoneCenterX;
+      const dy = this.player.y - zoneCenterY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Max distance is radius in tiles × 16px per tile
+      const maxDistance = data.radius * 16;
+
+      if (distance <= maxDistance) {
+        const normalizedDistance = Math.min(1, distance / maxDistance);
+        const zoneScreenX = (zoneCenterX - camera.scrollX) * camera.zoom;
+        const zoneScreenY = (zoneCenterY - camera.scrollY) * camera.zoom;
+
+        eventBus.emit('ZONE_PROXIMITY', {
+          zoneId: data.zoneId,
+          distance,
+          maxDistance,
+          normalizedDistance,
+          zoneScreenPos: { x: zoneScreenX, y: zoneScreenY },
+        });
+      }
+    }
+  }
+
+  private checkInteractions(): void {
+    if (this.inputPaused) return;
+
+    // E key — interact with kiosk/info zones
+    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      for (const zoneId of this.activeZones) {
+        const zoneEntry = this.zones.find(z => z.data.zoneId === zoneId);
+        if (zoneEntry && (zoneEntry.data.zoneType === 'kiosk' || zoneEntry.data.zoneType === 'info')) {
+          eventBus.emit('ZONE_INTERACT', {
+            zoneType: zoneEntry.data.zoneType as 'kiosk' | 'info',
+            zoneId,
+          });
+          console.log(`[GameScene] Interact: ${zoneId} (${zoneEntry.data.zoneType})`);
+          break; // Only interact with one zone at a time
+        }
+      }
+    }
+
+    // T key — open chat in chat zones
+    if (Phaser.Input.Keyboard.JustDown(this.chatKey)) {
+      for (const zoneId of this.activeZones) {
+        const zoneEntry = this.zones.find(z => z.data.zoneId === zoneId);
+        if (zoneEntry && zoneEntry.data.zoneType === 'chat') {
+          eventBus.emit('CHAT_OPEN', { zoneId });
+          console.log(`[GameScene] Chat open: ${zoneId}`);
+          break;
+        }
+      }
+    }
+  }
+
+  private renderDebugZones(): void {
+    if (this.debugGraphics) {
+      this.debugGraphics.destroy();
+      this.debugGraphics = null;
+    }
+
+    if (!this.debugVisible) return;
+
+    this.debugGraphics = this.add.graphics();
+    this.debugGraphics.setDepth(100);
+
+    const colors: Record<string, number> = {
+      chat: 0x00ff00,    // green
+      kiosk: 0x0000ff,   // blue
+      video: 0x9900ff,   // purple
+      webrtc: 0xff8800,  // orange
+      info: 0xffff00,    // yellow
+    };
+
+    for (const { body: zone, data } of this.zones) {
+      const color = colors[data.zoneType] || 0xffffff;
+      const halfW = (zone.width) / 2;
+      const halfH = (zone.height) / 2;
+
+      // Zone rectangle
+      this.debugGraphics.fillStyle(color, 0.2);
+      this.debugGraphics.fillRect(zone.x - halfW, zone.y - halfH, zone.width, zone.height);
+      this.debugGraphics.lineStyle(2, color, 0.8);
+      this.debugGraphics.strokeRect(zone.x - halfW, zone.y - halfH, zone.width, zone.height);
+
+      // Radius circle
+      this.debugGraphics.lineStyle(1, color, 0.3);
+      this.debugGraphics.strokeCircle(zone.x, zone.y, data.radius * 16);
+
+      // Label
+      this.add.text(zone.x, zone.y - halfH - 10, `${data.zoneId} (${data.zoneType})`, {
+        fontSize: '8px',
+        color: '#ffffff',
+        backgroundColor: '#000000aa',
+        padding: { x: 2, y: 1 },
+      }).setOrigin(0.5).setDepth(100);
+    }
+  }
+
+  // ==========================================
+  // FPS TELEMETRY
+  // ==========================================
+
+  private trackFPS(delta: number): void {
+    const fps = 1000 / delta;
+    this.fpsHistory.push(fps);
+
+    const maxSamples = 60 * this.FPS_WINDOW;
+    if (this.fpsHistory.length > maxSamples) {
+      this.fpsHistory.shift();
+    }
+
+    this.fpsTimer += delta;
+    if (this.fpsTimer >= this.FPS_EMIT_INTERVAL) {
+      this.fpsTimer = 0;
+
+      const current = Math.round(fps);
+      const average = Math.round(
+        this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length,
+      );
+      const min = Math.round(Math.min(...this.fpsHistory));
+      const frameTime = parseFloat(delta.toFixed(2));
+
+      eventBus.emit('TELEMETRY:FPS', { current, average, min, frameTime });
+    }
+  }
+
+  destroy(): void {
+    if (this.networkManager) this.networkManager.destroy();
+    if (this.debugGraphics) this.debugGraphics.destroy();
+    this.fpsHistory = [];
+    this.zones = [];
+    this.activeZones.clear();
+  }
+}
