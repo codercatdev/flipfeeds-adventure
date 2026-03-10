@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlipFeeds | The Edge-Native ARG</title>
+    <style>
+        :root {
+            --bg-dark: #0d0d12;
+            --bg-card: #1a1a24;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-primary: #00ffcc;
+            --accent-secondary: #ff007f;
+            --font-mono: 'Courier New', Courier, monospace;
+            --font-sans: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Glitch Effect for Title */
+        .glitch {
+            position: relative;
+            color: white;
+            font-size: 4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+        }
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--accent-secondary);
+            animation: glitch-anim-1 2s infinite linear alternate-reverse;
+        }
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 var(--accent-primary);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(20% 0 80% 0); }
+            20% { clip-path: inset(60% 0 10% 0); }
+            40% { clip-path: inset(40% 0 50% 0); }
+            60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(10% 0 70% 0); }
+            100% { clip-path: inset(30% 0 20% 0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(10% 0 60% 0); }
+            20% { clip-path: inset(30% 0 20% 0); }
+            40% { clip-path: inset(70% 0 10% 0); }
+            60% { clip-path: inset(20% 0 50% 0); }
+            80% { clip-path: inset(50% 0 30% 0); }
+            100% { clip-path: inset(5% 0 80% 0); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        header {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            border-bottom: 1px solid #333;
+        }
+
+        .tagline {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            font-family: var(--font-mono);
+            margin-bottom: 2rem;
+        }
+
+        .hero-desc {
+            font-size: 1.25rem;
+            max-width: 600px;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: transparent;
+            color: var(--accent-primary);
+            border: 2px solid var(--accent-primary);
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            background: var(--accent-primary);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+        }
+
+        section {
+            padding: 6rem 0;
+            border-bottom: 1px solid #333;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #fff;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; gap: 2rem; }
+            .glitch { font-size: 3rem; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            padding: 2.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary);
+        }
+
+        .card h3 {
+            color: var(--accent-primary);
+            font-family: var(--font-mono);
+            margin-top: 0;
+        }
+
+        .tech-stack {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .tech-pill {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+        }
+
+        footer {
+            padding: 4rem 0;
+            text-align: center;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="container">
+        <div class="tagline">// THE BROADCAST IS BROKEN</div>
+        <h1 class="glitch" data-text="FLIPFEEDS">FLIPFEEDS</h1>
+        <p class="hero-desc">A massively multiplayer 2D Alternate Reality Game (ARG) built natively on the edge. Uncover glitches, research real-world creator content, and restore the signal.</p>
+        <a href="mailto:invest@codingcat.dev" class="cta-button">Request Investor Deck</a>
+    </header>
+
+    <section class="container">
+        <h2>The Viewer Experience</h2>
+        <div class="grid-2">
+            <div>
+                <p>FlipFeeds bridges the gap between interactive web gaming and the creator economy. It operates like an infinite digital World Expo, where players explore dynamic, top-down pixel environments known as <strong>Feeds</strong>.</p>
+                <p>When a Feed experiences a <strong>Desync</strong>—like a corrupted industrial 3D printer violently extruding static in the Maker Feed—players must step outside the game. They hunt for clues hidden within actual CodingCat.dev YouTube broadcasts to find the continuity override keys.</p>
+            </div>
+            <div class="card">
+                <h3>// THE GAMEPLAY LOOP</h3>
+                <ul style="list-style-type: square; color: var(--text-muted);">
+                    <li><strong style="color: #fff;">Explore the Feeds:</strong> Navigate massively multiplayer public zones.</li>
+                    <li><strong style="color: #fff;">Spot the Desync:</strong> Identify narrative and visual glitches.</li>
+                    <li><strong style="color: #fff;">The Research Phase:</strong> Scour YouTube archives for the continuity key.</li>
+                    <li><strong style="color: #fff;">The Edit Bay:</strong> Retreat to private, speakeasy-style craft bourbon lounges to strategize with your guild.</li>
+                    <li><strong style="color: #fff;">The Flip:</strong> Enter the key, clear the static, and restore the broadcast.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="container">
+        <h2>Edge-Native Architecture</h2>
+        <div class="grid-2">
+            <div class="card" style="border-left-color: var(--accent-secondary);">
+                <h3 style="color: var(--accent-secondary);">// SUB-50MS MULTIPLAYER</h3>
+                <p>We are replacing traditional, expensive monolithic game servers with localized edge computing. By leveraging Cloudflare's global network, FlipFeeds acts as a high-visibility showcase for the future of web applications.</p>
+                <p>Public Feeds and private Edit Bays are spun up on-demand as <strong>Durable Objects</strong>, handling thousands of concurrent WebSocket connections natively at the edge.</p>
+            </div>
+            <div>
+                <p>Built by a team rooted in enterprise solutions engineering and developer education, the platform is designed to scale infinitely. New "Seasons" of content are deployed without interrupting the live game state, utilizing modern React UI overlays seamlessly layered over a high-performance WebGL canvas.</p>
+                <div class="tech-stack">
+                    <span class="tech-pill">Cloudflare Workers</span>
+                    <span class="tech-pill">PartyKit / WebSockets</span>
+                    <span class="tech-pill">Phaser 3 (WebGL)</span>
+                    <span class="tech-pill">Next.js / React</span>
+                    <span class="tech-pill">Cloudflare D1</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container" style="text-align: center;">
+        <h2>Join the Network</h2>
+        <p class="hero-desc" style="margin: 0 auto 2rem auto;">We are raising capital to scale our real-time compute infrastructure, expand the continuous integration pipeline, and fund the next season of broadcast mysteries.</p>
+        <a href="mailto:invest@codingcat.dev" class="cta-button">Contact the Showrunner</a>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 CodingCat.dev LLC. All signals reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
