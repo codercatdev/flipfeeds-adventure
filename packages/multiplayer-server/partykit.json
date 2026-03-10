@@ -1,0 +1,4 @@
+{
+  "name": "flipfeeds-multiplayer",
+  "main": "src/server.ts"
+}
