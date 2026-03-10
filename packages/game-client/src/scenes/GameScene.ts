@@ -400,7 +400,7 @@ export class GameScene extends Phaser.Scene {
     // Follow player with smooth lerp
     camera.startFollow(this.player, true, 0.1, 0.1);
 
-    // Default zoom \u2014 2x for crisp pixel art
+    // Default zoom — 2x for crisp pixel art
     camera.setZoom(1.5);
 
     console.log(
