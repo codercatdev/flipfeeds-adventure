@@ -29,7 +29,7 @@ const ZoneManager = dynamic(
 
 export default function Home() {
   const { status: wsStatus, latency, playerId } = useWebSocket({
-    host: process.env.NEXT_PUBLIC_PARTYKIT_HOST || 'localhost:1999',
+    host: import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999',
     room: 'main',
   });
 
