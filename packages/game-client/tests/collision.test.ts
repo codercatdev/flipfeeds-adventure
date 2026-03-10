@@ -21,7 +21,7 @@ const TILEMAP_PATH = resolve(__dirname, '../src/maps/conference-map.json');
 let wallsData: number[] = [];
 let mapWidth = 80;
 let mapHeight = 60;
-let tileSize = 16;
+let tileSize = 24;
 
 try {
   const raw = readFileSync(TILEMAP_PATH, 'utf-8');
@@ -111,24 +111,24 @@ function attemptMove(
 
 describe('Collision — Pixel to Tile Conversion', () => {
   it('converts (0, 0) to tile (0, 0)', () => {
-    expect(pixelToTile(0, 0, 16, 16)).toEqual({ tx: 0, ty: 0 });
+    expect(pixelToTile(0, 0, 24, 24)).toEqual({ tx: 0, ty: 0 });
   });
 
-  it('converts (15, 15) to tile (0, 0) — within first tile', () => {
-    expect(pixelToTile(15, 15, 16, 16)).toEqual({ tx: 0, ty: 0 });
+  it('converts (23, 23) to tile (0, 0) — within first tile', () => {
+    expect(pixelToTile(23, 23, 24, 24)).toEqual({ tx: 0, ty: 0 });
   });
 
-  it('converts (16, 0) to tile (1, 0) — next tile boundary', () => {
-    expect(pixelToTile(16, 0, 16, 16)).toEqual({ tx: 1, ty: 0 });
+  it('converts (24, 0) to tile (1, 0) — next tile boundary', () => {
+    expect(pixelToTile(24, 0, 24, 24)).toEqual({ tx: 1, ty: 0 });
   });
 
-  it('converts (160, 320) to tile (10, 20)', () => {
-    expect(pixelToTile(160, 320, 16, 16)).toEqual({ tx: 10, ty: 20 });
+  it('converts (240, 480) to tile (10, 20)', () => {
+    expect(pixelToTile(240, 480, 24, 24)).toEqual({ tx: 10, ty: 20 });
   });
 
   it('converts pixel at world edge correctly', () => {
-    // Last pixel of the map: (1279, 959) → tile (79, 59)
-    expect(pixelToTile(1279, 959, 16, 16)).toEqual({ tx: 79, ty: 59 });
+    // Last pixel of the map: (1919, 1439) → tile (79, 59)
+    expect(pixelToTile(1919, 1439, 24, 24)).toEqual({ tx: 79, ty: 59 });
   });
 });
 
@@ -197,7 +197,7 @@ describe('Collision — Movement Blocking', () => {
   ];
   const w = 3;
   const h = 3;
-  const ts = 16;
+  const ts = 24;
 
   it('player can move to open tile', () => {
     // Center tile (1,1) is open — pixel (24, 24) is in tile (1,1)
@@ -241,9 +241,9 @@ describe('Collision — Real Tilemap Walls', () => {
     expect(openCount).toBeGreaterThan(0);
   });
 
-  it('spawn point location (640, 672) is not blocked', () => {
-    // The default spawn is at pixel (640, 672) → tile (40, 42)
-    const { tx, ty } = pixelToTile(640, 672, tileSize, tileSize);
+  it('spawn point location (960, 1008) is not blocked', () => {
+    // The default spawn is at pixel (960, 1008) → tile (40, 42)
+    const { tx, ty } = pixelToTile(960, 1008, tileSize, tileSize);
     expect(isTileBlocked(tx, ty, wallsData, mapWidth, mapHeight)).toBe(false);
   });
 

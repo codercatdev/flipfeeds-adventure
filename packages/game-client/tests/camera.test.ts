@@ -74,7 +74,7 @@ function updateCameraFollow(
 // Tests
 // ============================================================
 
-const WORLD_BOUNDS: WorldBounds = { x: 0, y: 0, width: 1280, height: 960 };
+const WORLD_BOUNDS: WorldBounds = { x: 0, y: 0, width: 1920, height: 1440 };
 const VIEWPORT = { viewportWidth: 800, viewportHeight: 600 };
 
 describe('Camera — Lerp Function', () => {

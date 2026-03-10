@@ -12,17 +12,17 @@ import type {
 } from "@flipfeeds/shared";
 
 /** Maximum player speed in pixels per second */
-const MAX_SPEED = 120;
+const MAX_SPEED = 168;
 
 /** Tolerance multiplier for move validation (accounts for network jitter) */
 const SPEED_TOLERANCE = 1.5;
 
 /** Map bounds in pixels (80×60 tiles × 16px) */
-const MAP_WIDTH = 1280;
-const MAP_HEIGHT = 960;
+const MAP_WIDTH = 1920;
+const MAP_HEIGHT = 1440;
 
 /** Player sprite half-size for boundary clamping */
-const PLAYER_HALF = 8;
+const PLAYER_HALF = 12;
 
 /** Disconnect grace period in ms before removing player */
 const DISCONNECT_TIMEOUT = 10_000;
@@ -68,11 +68,11 @@ export default class GameServer implements Party.Server {
     const isReconnect = !!player;
 
     if (!player) {
-      // New player — spawn in Main Lobby center tile (40, 42) = (640, 672)px
+      // New player — spawn in Main Lobby center tile (40, 42) = (960, 1008)px
       player = {
         id: playerId,
-        x: 640 + (Math.random() * 64 - 32),
-        y: 672 + (Math.random() * 64 - 32),
+        x: 960 + (Math.random() * 96 - 48),
+        y: 1008 + (Math.random() * 96 - 48),
         dir: "idle",
         anim: "idle",
       };

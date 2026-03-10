@@ -47,7 +47,7 @@ function getDirection(keys: KeyState): Direction {
 }
 
 /** Movement speed in pixels per second (from map spec) */
-const PLAYER_SPEED = 120;
+const PLAYER_SPEED = 168;
 
 /**
  * Calculate velocity vector from direction and speed.
@@ -164,8 +164,8 @@ describe('Player Controller — Opposing Keys Cancel', () => {
 });
 
 describe('Player Controller — Movement Speed', () => {
-  it('movement speed is 120 px/sec', () => {
-    expect(PLAYER_SPEED).toBe(120);
+  it('movement speed is 168 px/sec', () => {
+    expect(PLAYER_SPEED).toBe(168);
   });
 
   it('cardinal direction velocity magnitude equals speed', () => {

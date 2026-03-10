@@ -4,12 +4,12 @@ import type { Direction, ZoneType } from '@flipfeeds/shared';
 import { NetworkManager } from '../multiplayer/NetworkManager';
 
 // Movement speed in pixels per second
-const PLAYER_SPEED = 120;
+const PLAYER_SPEED = 168;
 const DIAGONAL_FACTOR = 1 / Math.SQRT2; // ~0.707
 
 export class GameScene extends Phaser.Scene {
   // Player
-  private player!: Phaser.GameObjects.Arc;
+  private player!: Phaser.GameObjects.Sprite;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private currentDirection: Direction = 'idle';
 
@@ -116,8 +116,8 @@ export class GameScene extends Phaser.Scene {
   private createTilemap(): void {
     this.map = this.make.tilemap({ key: 'conference-map' });
     const tileset = this.map.addTilesetImage(
-      'conference-tiles',
-      'conference-tiles',
+      'oryx_16bit_scifi_world',
+      'oryx_16bit_scifi_world',
     );
 
     if (!tileset) {
@@ -178,14 +178,19 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Placeholder player (circle) \u2014 will be replaced with sprite in future
-    this.player = this.add.circle(spawnX, spawnY, 8, 0x00ff88);
+    // Animated player sprite from Oryx creatures spritesheet
+    this.player = this.add.sprite(spawnX, spawnY, 'creatures', 416);
     this.player.setDepth(3);
+
+    // Create walk animations
+    this.createPlayerAnimations();
 
     this.physics.add.existing(this.player);
     this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     this.playerBody.setCollideWorldBounds(true);
-    this.playerBody.setCircle(8);
+    // Physics body: 16×16 centered at bottom of 24×24 sprite
+    this.playerBody.setSize(16, 16);
+    this.playerBody.setOffset(4, 8);
 
     // Add collision with walls
     if (this.wallsLayer) {
@@ -200,6 +205,51 @@ export class GameScene extends Phaser.Scene {
       y: spawnY,
       direction: 'idle' as Direction,
     });
+  }
+
+  private createPlayerAnimations(): void {
+    // Walk animations from Oryx creatures spritesheet
+    // Row 13 = walk-down, Row 14 = walk-up, Row 15 = walk-left
+    this.anims.create({
+      key: 'walk-down',
+      frames: this.anims.generateFrameNumbers('creatures', { frames: [416, 417, 418, 419] }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: 'walk-up',
+      frames: this.anims.generateFrameNumbers('creatures', { frames: [448, 449, 450, 451] }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: 'walk-left',
+      frames: this.anims.generateFrameNumbers('creatures', { frames: [480, 481, 482, 483] }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: 'idle-down',
+      frames: [{ key: 'creatures', frame: 416 }],
+      frameRate: 1,
+    });
+
+    this.anims.create({
+      key: 'idle-up',
+      frames: [{ key: 'creatures', frame: 448 }],
+      frameRate: 1,
+    });
+
+    this.anims.create({
+      key: 'idle-left',
+      frames: [{ key: 'creatures', frame: 480 }],
+      frameRate: 1,
+    });
+
+    console.log('[GameScene] Player animations created');
   }
 
   // ==========================================
@@ -283,6 +333,9 @@ export class GameScene extends Phaser.Scene {
     this.playerBody.setVelocity(vx, vy);
     this.currentDirection = direction;
 
+    // Play walk/idle animations
+    this.updatePlayerAnimation(direction);
+
     // Emit position to EventBus for React UI and server sync
     if (direction !== 'idle') {
       eventBus.emit('PLAYER_POSITION', {
@@ -297,6 +350,35 @@ export class GameScene extends Phaser.Scene {
         y: this.player.y,
         direction: this.currentDirection,
       });
+    }
+  }
+
+  private updatePlayerAnimation(direction: Direction): void {
+    this.player.setFlipX(false);
+
+    switch (direction) {
+      case 'down':
+      case 'down-left':
+      case 'down-right':
+        this.player.play('walk-down', true);
+        if (direction === 'down-right') this.player.setFlipX(true);
+        break;
+      case 'up':
+      case 'up-left':
+      case 'up-right':
+        this.player.play('walk-up', true);
+        if (direction === 'up-right') this.player.setFlipX(true);
+        break;
+      case 'left':
+        this.player.play('walk-left', true);
+        break;
+      case 'right':
+        this.player.play('walk-left', true);
+        this.player.setFlipX(true);
+        break;
+      case 'idle':
+        this.player.stop();
+        break;
     }
   }
 
@@ -319,7 +401,7 @@ export class GameScene extends Phaser.Scene {
     camera.startFollow(this.player, true, 0.1, 0.1);
 
     // Default zoom \u2014 2x for crisp pixel art
-    camera.setZoom(2);
+    camera.setZoom(1.5);
 
     console.log(
       `[GameScene] Camera following player, zoom=2x, bounds=${this.map.widthInPixels}x${this.map.heightInPixels}`,
@@ -468,7 +550,7 @@ export class GameScene extends Phaser.Scene {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       // Max distance is radius in tiles × 16px per tile
-      const maxDistance = data.radius * 16;
+      const maxDistance = data.radius * 24;
 
       if (distance <= maxDistance) {
         const normalizedDistance = Math.min(1, distance / maxDistance);

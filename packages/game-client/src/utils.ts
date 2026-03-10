@@ -31,5 +31,6 @@ export function getDirectionFromInput(keys: {
 }
 
 /** Movement speed constants */
-export const PLAYER_SPEED = 120; // pixels per second
+export const PLAYER_SPEED = 168; // pixels per second (7 tiles/sec × 24px)
 export const DIAGONAL_FACTOR = 1 / Math.SQRT2; // ~0.707 — normalize diagonal speed
+export const TILE_SIZE = 24; // pixels per tile

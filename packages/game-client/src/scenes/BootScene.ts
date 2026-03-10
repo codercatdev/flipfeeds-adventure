@@ -34,9 +34,15 @@ export class BootScene extends Phaser.Scene {
       console.log('[BootScene] All assets loaded');
     });
 
-    // Load tilemap and tileset
+    // Load tilemap and Oryx world tileset
     this.load.tilemapTiledJSON('conference-map', 'assets/maps/conference-map.json');
-    this.load.image('conference-tiles', 'assets/tilesets/conference-tiles.png');
+    this.load.image('oryx_16bit_scifi_world', 'assets/tilesets/oryx_16bit_scifi_world_trans.png');
+
+    // Load character spritesheet (24×24 frames, 32 columns × 41 rows = 1312 frames)
+    this.load.spritesheet('creatures', 'assets/tilesets/oryx_16bit_scifi_creatures_trans.png', {
+      frameWidth: 24,
+      frameHeight: 24,
+    });
   }
 
   create(): void {

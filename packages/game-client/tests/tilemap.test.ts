@@ -37,7 +37,7 @@ describe('Tilemap — File Validity', () => {
 
   it('tileset has a firstgid and name', () => {
     const ts = tilemap.tilesets[0];
-    expect(ts.name).toBe('conference-tiles');
+    expect(ts.name).toBe('oryx_16bit_scifi_world');
     expect(ts.firstgid).toBe(1);
   });
 
@@ -53,16 +53,16 @@ describe('Tilemap — Dimensions', () => {
     expect(tilemap.height).toBe(60);
   });
 
-  it('tile size is 16×16 pixels', () => {
-    expect(tilemap.tilewidth).toBe(16);
-    expect(tilemap.tileheight).toBe(16);
+  it('tile size is 24×24 pixels', () => {
+    expect(tilemap.tilewidth).toBe(24);
+    expect(tilemap.tileheight).toBe(24);
   });
 
-  it('world pixel size is 1280×960', () => {
+  it('world pixel size is 1920×1440', () => {
     const worldWidth = tilemap.width * tilemap.tilewidth;
     const worldHeight = tilemap.height * tilemap.tileheight;
-    expect(worldWidth).toBe(1280);
-    expect(worldHeight).toBe(960);
+    expect(worldWidth).toBe(1920);
+    expect(worldHeight).toBe(1440);
   });
 });
 
@@ -133,7 +133,7 @@ describe('Tilemap — Walls Layer (Collision)', () => {
     const walls = tilemap.layers.find((l: any) => l.name === 'Walls');
     const nonZeroTiles = walls.data.filter((t: number) => t > 0).length;
     expect(nonZeroTiles).toBeGreaterThan(0);
-    // We know from inspection there are 409 wall tiles
+    // We know from inspection there are 472 wall tiles
     expect(nonZeroTiles).toBeGreaterThanOrEqual(100);
   });
 
@@ -223,8 +223,8 @@ describe('Tilemap — InteractionZones Layer', () => {
   });
 
   it('zones are within world bounds', () => {
-    const worldWidth = tilemap.width * tilemap.tilewidth;   // 1280
-    const worldHeight = tilemap.height * tilemap.tileheight; // 960
+    const worldWidth = tilemap.width * tilemap.tilewidth;   // 1920
+    const worldHeight = tilemap.height * tilemap.tileheight; // 1440
     for (const zone of zones) {
       expect(zone.x).toBeGreaterThanOrEqual(0);
       expect(zone.y).toBeGreaterThanOrEqual(0);
@@ -246,9 +246,10 @@ describe('Tilemap — SpawnPoints Layer', () => {
     expect(spawnPoints.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('spawn point has type "spawn"', () => {
+  it('spawn point has type or is untyped (Oryx export)', () => {
     for (const sp of spawnPoints) {
-      expect(sp.type).toBe('spawn');
+      // Oryx tileset export may leave type empty; accept both
+      expect(['spawn', '']).toContain(sp.type);
     }
   });
 

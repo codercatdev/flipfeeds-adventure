@@ -1,11 +1,16 @@
+import Phaser from 'phaser';
 import eventBus from '../EventBus';
 
 interface PooledSprite {
-  circle: Phaser.GameObjects.Arc;
+  sprite: Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
   active: boolean;
   playerId: string | null;
+  variant: number;
 }
+
+// Character color variant column offsets in the creatures spritesheet
+const PLAYER_VARIANTS = [0, 4, 8, 12];
 
 export class SpritePool {
   private pool: PooledSprite[] = [];
@@ -22,66 +27,58 @@ export class SpritePool {
 
   /** Acquire a sprite for a player. Reuses from pool or creates new. */
   acquire(playerId: string, x: number, y: number, name?: string): PooledSprite {
-    // Check if already active
     const existing = this.activeMap.get(playerId);
     if (existing) return existing;
 
-    // Try to reuse from pool
-    let sprite = this.pool.find((s) => !s.active);
+    let entry = this.pool.find(s => !s.active);
 
-    if (sprite) {
-      // Recycle existing sprite
-      sprite.active = true;
-      sprite.playerId = playerId;
-      sprite.circle.setPosition(x, y);
-      sprite.circle.setVisible(true);
-      sprite.circle.setActive(true);
-      sprite.label.setText(name || playerId.slice(0, 6));
-      sprite.label.setPosition(x, y - 16);
-      sprite.label.setVisible(true);
+    if (entry) {
+      entry.active = true;
+      entry.playerId = playerId;
+      entry.sprite.setPosition(x, y);
+      entry.sprite.setVisible(true);
+      entry.sprite.setActive(true);
+      entry.label.setText(name || playerId.slice(0, 6));
+      entry.label.setPosition(x, y - 20);
+      entry.label.setVisible(true);
       this.lifetimeRecycled++;
     } else {
-      // Create new sprite
-      const circle = this.scene.add.circle(
-        x,
-        y,
-        8,
-        this.getPlayerColor(playerId),
-      );
-      circle.setDepth(3);
-      this.scene.physics.add.existing(circle);
+      const variant = this.getVariantOffset(playerId);
+      const sprite = this.scene.add.sprite(x, y, 'creatures', 416 + variant);
+      sprite.setDepth(3);
+      this.scene.physics.add.existing(sprite);
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.setSize(16, 16);
+      body.setOffset(4, 8);
 
-      const label = this.scene.add
-        .text(x, y - 16, name || playerId.slice(0, 6), {
-          fontSize: '10px',
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          backgroundColor: '#00000088',
-          padding: { x: 2, y: 1 },
-        })
-        .setOrigin(0.5)
-        .setDepth(5);
+      const label = this.scene.add.text(x, y - 20, name || playerId.slice(0, 6), {
+        fontSize: '10px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        backgroundColor: '#00000088',
+        padding: { x: 2, y: 1 },
+      }).setOrigin(0.5).setDepth(5);
 
-      sprite = { circle, label, active: true, playerId };
-      this.pool.push(sprite);
+      entry = { sprite, label, active: true, playerId, variant };
+      this.pool.push(entry);
       this.lifetimeCreated++;
     }
 
-    this.activeMap.set(playerId, sprite);
+    this.activeMap.set(playerId, entry);
     this.emitStats();
-    return sprite;
+    return entry;
   }
 
   /** Release a sprite back to the pool. */
   release(playerId: string): void {
-    const sprite = this.activeMap.get(playerId);
-    if (!sprite) return;
+    const entry = this.activeMap.get(playerId);
+    if (!entry) return;
 
-    sprite.active = false;
-    sprite.playerId = null;
-    sprite.circle.setVisible(false);
-    sprite.circle.setActive(false);
-    sprite.label.setVisible(false);
+    entry.active = false;
+    entry.playerId = null;
+    entry.sprite.setVisible(false);
+    entry.sprite.setActive(false);
+    entry.label.setVisible(false);
 
     this.activeMap.delete(playerId);
     this.emitStats();
@@ -94,20 +91,14 @@ export class SpritePool {
 
   /** Update sprite position (for interpolation). */
   updatePosition(playerId: string, x: number, y: number): void {
-    const sprite = this.activeMap.get(playerId);
-    if (!sprite) return;
-    sprite.circle.setPosition(x, y);
-    sprite.label.setPosition(x, y - 16);
+    const entry = this.activeMap.get(playerId);
+    if (!entry) return;
+    entry.sprite.setPosition(x, y);
+    entry.label.setPosition(x, y - 20);
   }
 
   /** Get current pool stats. */
-  getStats(): {
-    active: number;
-    idle: number;
-    total: number;
-    created: number;
-    recycled: number;
-  } {
+  getStats(): { active: number; idle: number; total: number; created: number; recycled: number } {
     const active = this.activeMap.size;
     const total = this.pool.length;
     return {
@@ -121,9 +112,9 @@ export class SpritePool {
 
   /** Release all sprites and clean up. */
   destroy(): void {
-    for (const sprite of this.pool) {
-      sprite.circle.destroy();
-      sprite.label.destroy();
+    for (const entry of this.pool) {
+      entry.sprite.destroy();
+      entry.label.destroy();
     }
     this.pool = [];
     this.activeMap.clear();
@@ -133,14 +124,11 @@ export class SpritePool {
     eventBus.emit('TELEMETRY:POOL', this.getStats());
   }
 
-  private getPlayerColor(id: string): number {
-    // Generate a consistent color from player ID
+  private getVariantOffset(id: string): number {
     let hash = 0;
     for (let i = 0; i < id.length; i++) {
       hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
     }
-    // Ensure bright, saturated colors (avoid dark/muddy)
-    const hue = Math.abs(hash) % 360;
-    return Phaser.Display.Color.HSLToColor(hue / 360, 0.7, 0.6).color;
+    return PLAYER_VARIANTS[Math.abs(hash) % PLAYER_VARIANTS.length];
   }
 }
