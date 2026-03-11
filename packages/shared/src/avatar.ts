@@ -39,13 +39,19 @@ export function getAvatarFrames(config: AvatarConfig) {
   const row = type.walkDownRow;
   const col = COLOR_VARIANTS[config.colorVariant] ?? 0;
 
+  // Oryx sci-fi creatures are all front-facing (1312 unique sprites).
+  // All directions use the same row — no directional views exist.
+  // The 4 columns per color variant are walk cycle frames (all front-facing).
+  const walkFrames = [0, 1, 2, 3].map(f => row * SPRITE_COLS + col + f);
+  const idleFrame = row * SPRITE_COLS + col;
+
   return {
-    walkDown:  [0, 1, 2, 3].map(f => row * SPRITE_COLS + col + f),
-    walkUp:    [0, 1, 2, 3].map(f => (row + 1) * SPRITE_COLS + col + f),
-    walkLeft:  [0, 1, 2, 3].map(f => (row + 2) * SPRITE_COLS + col + f),
-    idleDown:  row * SPRITE_COLS + col,
-    idleUp:    (row + 1) * SPRITE_COLS + col,
-    idleLeft:  (row + 2) * SPRITE_COLS + col,
+    walkDown:  walkFrames,
+    walkUp:    walkFrames,
+    walkLeft:  walkFrames,
+    idleDown:  idleFrame,
+    idleUp:    idleFrame,
+    idleLeft:  idleFrame,
   };
 }
 

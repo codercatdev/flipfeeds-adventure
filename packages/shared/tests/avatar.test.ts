@@ -124,17 +124,17 @@ describe('Phase 6 — getAvatarFrames', () => {
     // Row 13, col 0: walkDown starts at 13 * 32 + 0 = 416
     expect(frames.walkDown[0]).toBe(416);
     expect(frames.walkDown).toEqual([416, 417, 418, 419]);
-    // walkUp is row 14: 14 * 32 = 448
-    expect(frames.walkUp[0]).toBe(448);
-    // walkLeft is row 15: 15 * 32 = 480
-    expect(frames.walkLeft[0]).toBe(480);
+    // All directions use the same row (Oryx sprites are front-facing only)
+    expect(frames.walkUp).toEqual(frames.walkDown);
+    expect(frames.walkLeft).toEqual(frames.walkDown);
   });
 
   it('Engineer (type 1, color 0) uses row 0', () => {
     const frames = getAvatarFrames({ characterType: 1, colorVariant: 0 });
     expect(frames.walkDown[0]).toBe(0);
-    expect(frames.walkUp[0]).toBe(32);
-    expect(frames.walkLeft[0]).toBe(64);
+    // All directions use the same row (front-facing only)
+    expect(frames.walkUp[0]).toBe(0);
+    expect(frames.walkLeft[0]).toBe(0);
   });
 
   it('color variant shifts column offset', () => {
@@ -190,21 +190,23 @@ describe('Phase 6 — getAvatarFrames', () => {
     expect(frames).toEqual(col0Frames);
   });
 
-  it('walkUp row is walkDown row + 1', () => {
+  it('all directions use the same row (front-facing sprites)', () => {
     for (let type = 0; type < 5; type++) {
       const frames = getAvatarFrames({ characterType: type, colorVariant: 0 });
-      const downRow = Math.floor(frames.walkDown[0] / SPRITE_COLS);
-      const upRow = Math.floor(frames.walkUp[0] / SPRITE_COLS);
-      expect(upRow).toBe(downRow + 1);
+      // Oryx sci-fi creatures are all front-facing — no directional views
+      expect(frames.walkUp).toEqual(frames.walkDown);
+      expect(frames.walkLeft).toEqual(frames.walkDown);
+      expect(frames.idleUp).toBe(frames.idleDown);
+      expect(frames.idleLeft).toBe(frames.idleDown);
     }
   });
 
-  it('walkLeft row is walkDown row + 2', () => {
+  it('idle frames equal first walk frame for all directions', () => {
     for (let type = 0; type < 5; type++) {
       const frames = getAvatarFrames({ characterType: type, colorVariant: 0 });
-      const downRow = Math.floor(frames.walkDown[0] / SPRITE_COLS);
-      const leftRow = Math.floor(frames.walkLeft[0] / SPRITE_COLS);
-      expect(leftRow).toBe(downRow + 2);
+      expect(frames.idleDown).toBe(frames.walkDown[0]);
+      expect(frames.idleUp).toBe(frames.walkUp[0]);
+      expect(frames.idleLeft).toBe(frames.walkLeft[0]);
     }
   });
 });
