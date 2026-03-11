@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
@@ -60,9 +60,23 @@ export default function Home() {
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {
     await updateAvatar(config);
     setShowPicker(false);
-    // Notify the game engine about the avatar selection
-    eventBus.emit('AVATAR_SELECTED', config);
+    // Note: Don't emit AVATAR_SELECTED here — GameCanvas isn't mounted yet on first pick.
+    // The useEffect below handles emitting after GAME_READY.
   }, [updateAvatar]);
+
+  // Emit saved avatar config once the game engine is ready.
+  // Fixes race condition: on first pick, GameCanvas mounts AFTER the picker closes,
+  // so we wait for GAME_READY then send the config.
+  useEffect(() => {
+    if (hasAvatar && session?.user?.avatarConfig) {
+      const config = session.user.avatarConfig;
+      const handler = () => {
+        eventBus.emit('AVATAR_SELECTED', config);
+      };
+      eventBus.on('GAME_READY', handler);
+      return () => { eventBus.off('GAME_READY', handler); };
+    }
+  }, [hasAvatar, session?.user?.avatarConfig]);
 
   // Show loading while checking auth
   if (isPending) {
