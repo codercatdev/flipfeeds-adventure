@@ -101,33 +101,43 @@ export function ChatSheet({ playerName = 'Player' }: ChatSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="h-[40vh] max-h-[400px] bg-background/95 backdrop-blur-md border-t border-border">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="flex items-center gap-2 text-sm">
-            <MessageCircle className="size-4 text-primary" />
-            Zone Chat
+      <SheetContent
+        side="bottom"
+        className="h-[45vh] max-h-[480px] min-h-[320px] bg-background/95 backdrop-blur-md border-t border-border mx-4 sm:mx-6 mb-6 rounded-t-2xl"
+      >
+        <SheetHeader className="px-6 pt-5 pb-3">
+          <SheetTitle className="flex items-center gap-3 text-base font-semibold">
+            <div className="flex items-center justify-center size-8 rounded-full bg-primary/20">
+              <MessageCircle className="size-4 text-primary" />
+            </div>
+            Chat with other players
           </SheetTitle>
         </SheetHeader>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-4 space-y-2 min-h-0">
+        {/* Messages area — spacious with generous padding */}
+        <div className="flex-1 overflow-y-auto px-6 space-y-3 min-h-[200px]">
           {messages.length === 0 && (
-            <p className="text-muted-foreground text-sm text-center py-8">
-              No messages yet. Say hello! 👋
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="flex items-center justify-center size-12 rounded-full bg-muted">
+                <MessageCircle className="size-6 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground text-sm">
+                No messages yet. Say hello! 👋
+              </p>
+            </div>
           )}
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={cn(
-                "text-sm rounded-lg px-3 py-2 max-w-[80%]",
+                "rounded-2xl px-4 py-3 max-w-[75%] text-sm leading-relaxed",
                 msg.playerId === 'self'
                   ? "ml-auto bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground"
               )}
             >
               {msg.playerId !== 'self' && (
-                <span className="text-xs text-muted-foreground block mb-0.5">
+                <span className="text-xs font-medium text-primary block mb-1">
                   {msg.playerId.slice(0, 8)}
                 </span>
               )}
@@ -137,24 +147,26 @@ export function ChatSheet({ playerName = 'Player' }: ChatSheetProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input area */}
-        <div className="flex gap-2 p-4 pt-2 border-t border-border">
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            className="flex-1 bg-input text-foreground rounded-md px-3 py-2 text-sm border border-border focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!inputValue.trim()}
-            className="bg-primary text-primary-foreground rounded-md px-3 py-2 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send className="size-4" />
-          </button>
+        {/* Input area — large, comfortable, Google I/O inspired */}
+        <div className="px-6 pb-6 pt-4">
+          <div className="flex gap-3 items-center bg-input/50 border border-border rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-ring focus-within:border-primary transition-all">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Chat with other attendees..."
+              className="flex-1 bg-transparent text-foreground text-sm outline-none placeholder:text-muted-foreground"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!inputValue.trim()}
+              className="flex items-center justify-center size-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            >
+              <Send className="size-4" />
+            </button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
