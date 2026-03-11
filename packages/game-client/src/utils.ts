@@ -43,7 +43,7 @@ export const ZONE_COLORS: Record<string, number> = {
 
 /** Zone type → interaction prompt text. Returns empty string for zones with no prompt. */
 export function getZonePromptText(zoneType: string): string {
-  if (zoneType === 'kiosk' || zoneType === 'info') return 'Press E';
+  if (zoneType === 'kiosk' || zoneType === 'info' || zoneType === 'video') return 'Press E';
   if (zoneType === 'chat' || zoneType === 'webrtc') return 'Press T';
   return '';
 }
