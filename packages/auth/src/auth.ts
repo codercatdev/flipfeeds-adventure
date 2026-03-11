@@ -1,6 +1,4 @@
 import { betterAuth } from 'better-auth';
-import { Kysely } from 'kysely';
-import { D1Dialect } from 'kysely-d1';
 
 import type { AvatarConfig } from '@flipfeeds/shared';
 
@@ -12,32 +10,25 @@ import type { AvatarConfig } from '@flipfeeds/shared';
  * const auth = createAuth(env.DB, env);
  * ```
  *
- * Note: better-auth uses Kysely + kysely-d1 under the hood for D1 support.
- * The D1Dialect wraps Cloudflare's D1 binding into a Kysely-compatible dialect.
+ * Uses better-auth v1.5+ native D1 support — no ORM needed.
+ * D1 binding is auto-detected as SQLite.
  */
 export function createAuth(d1: D1Database, env?: Record<string, string | undefined>) {
-  const db = new Kysely({
-    dialect: new D1Dialect({ database: d1 }),
-  });
-
   return betterAuth({
-    database: {
-      db,
-      type: 'sqlite', // D1 is SQLite-based
-    },
+    database: d1, // Native D1 support — auto-detected, no ORM needed
 
     emailAndPassword: {
-      enabled: false, // OAuth only for now
+      enabled: false, // OAuth only — no password hashing (safe on CF free tier)
     },
 
     socialProviders: {
       google: {
-        clientId: env?.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
-        clientSecret: env?.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '',
+        clientId: env?.GOOGLE_CLIENT_ID || '',
+        clientSecret: env?.GOOGLE_CLIENT_SECRET || '',
       },
       github: {
-        clientId: env?.GITHUB_CLIENT_ID || process.env.GITHUB_CLIENT_ID || '',
-        clientSecret: env?.GITHUB_CLIENT_SECRET || process.env.GITHUB_CLIENT_SECRET || '',
+        clientId: env?.GITHUB_CLIENT_ID || '',
+        clientSecret: env?.GITHUB_CLIENT_SECRET || '',
       },
     },
 
@@ -59,6 +50,11 @@ export function createAuth(d1: D1Database, env?: Record<string, string | undefin
     session: {
       expiresIn: 60 * 60 * 24 * 30, // 30 days
       updateAge: 60 * 60 * 24, // Update session every 24 hours
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60, // 5 min cache — reduces D1 queries on every request
+        strategy: 'jwt', // Standard, interoperable — good for PartyKit token validation
+      },
     },
   });
 }
