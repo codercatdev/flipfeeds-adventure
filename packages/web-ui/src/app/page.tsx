@@ -6,6 +6,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import { AvatarPicker } from '../components/AvatarPicker';
+import { UserInfoHUD } from '../components/UserInfoHUD';
 import { LoginScreen } from '../components/LoginScreen';
 import { eventBus } from '@flipfeeds/game-client/events';
 
@@ -119,6 +120,12 @@ export default function Home() {
       </div>
       <div id="ui-overlay">
         <ZoneManager />
+        <UserInfoHUD
+          userName={session?.user?.name || 'Player'}
+          avatarConfig={session?.user?.avatarConfig || { characterType: 0, colorVariant: 0 }}
+          onChangeAvatar={() => setShowPicker(true)}
+          onSignOut={signOut}
+        />
         <ConnectionStatus wsStatus={wsStatus} latency={latency} playerId={playerId} />
       </div>
     </>
