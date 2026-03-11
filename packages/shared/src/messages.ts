@@ -15,7 +15,7 @@ export type ServerWelcomeMessage = { type: 'welcome'; id: string; players: Playe
 export type ServerSyncMessage = { type: 'sync'; players: PlayerDelta[]; tick: number; ack?: number; serverTime?: number };
 export type ServerPlayerJoinMessage = { type: 'player-join'; player: PlayerState };
 export type ServerPlayerLeaveMessage = { type: 'player-leave'; id: string };
-export type ServerChatMessage = { type: 'chat'; id: string; text: string };
+export type ServerChatMessage = { type: 'chat'; id: string; text: string; name?: string };
 export type ServerPongMessage = { type: 'pong'; t: number };
 
 export type ServerMessage =

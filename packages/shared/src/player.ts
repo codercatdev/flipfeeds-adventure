@@ -1,12 +1,8 @@
+import type { AvatarConfig } from './avatar';
+
 export type Direction =
-  | 'up'
-  | 'down'
-  | 'left'
-  | 'right'
-  | 'up-left'
-  | 'up-right'
-  | 'down-left'
-  | 'down-right'
+  | 'up' | 'down' | 'left' | 'right'
+  | 'up-left' | 'up-right' | 'down-left' | 'down-right'
   | 'idle';
 
 export interface PlayerState {
@@ -16,6 +12,7 @@ export interface PlayerState {
   dir: Direction;
   name?: string;
   anim?: string;
+  avatarConfig?: AvatarConfig;
 }
 
 export interface PlayerDelta {
