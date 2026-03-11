@@ -43,31 +43,28 @@ export default class GameServer implements Party.Server {
   static async onBeforeConnect(req: Party.Request, lobby: Party.Lobby) {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
+    const nameParam = url.searchParams.get("name") || "Anonymous";
 
-    // If no token, allow connection with fallback identity from query params.
-    // The client may not be able to read the httpOnly session cookie.
-    // Once client passes token via session API, we can enforce auth here.
+    // No token = reject. Game requires authentication.
     if (!token) {
-      const name = url.searchParams.get("name") || "Anonymous";
-      req.headers.set("x-user-id", "");  // empty = use conn.id in onConnect
-      req.headers.set("x-user-name", name);
-      req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
-      return req;
+      return new Response("Authentication required", { status: 401 });
     }
 
     const authUrl =
       (lobby.env.BETTER_AUTH_URL as string) || "https://app.flipfeeds.com";
 
     try {
-      const res = await fetch(`${authUrl}/api/auth/session`, {
-        headers: { Authorization: `Bearer ${token}` },
+      // better-auth session endpoint is /get-session (NOT /session)
+      const res = await fetch(`${authUrl}/api/auth/get-session`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
-        // Token invalid — still allow with fallback rather than hard reject
-        const name = url.searchParams.get("name") || "Anonymous";
+        // Auth service returned error — allow with fallback name
         req.headers.set("x-user-id", "");
-        req.headers.set("x-user-name", name);
+        req.headers.set("x-user-name", nameParam);
         req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
         return req;
       }
@@ -78,16 +75,17 @@ export default class GameServer implements Party.Server {
           name?: string;
           avatarConfig?: string | AvatarConfig;
         };
-      };
+      } | null;
 
-      const user = session?.user;
-      if (!user?.id) {
-        const name = url.searchParams.get("name") || "Anonymous";
+      if (!session?.user?.id) {
+        // Valid response but no session — allow with fallback
         req.headers.set("x-user-id", "");
-        req.headers.set("x-user-name", name);
+        req.headers.set("x-user-name", nameParam);
         req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
         return req;
       }
+
+      const user = session.user;
 
       // Parse avatarConfig — may be a JSON string from better-auth additionalFields
       let avatarConfig: AvatarConfig = DEFAULT_AVATAR;
@@ -105,15 +103,14 @@ export default class GameServer implements Party.Server {
 
       // Forward authenticated identity to onConnect via request headers
       req.headers.set("x-user-id", user.id);
-      req.headers.set("x-user-name", user.name || "Anonymous");
+      req.headers.set("x-user-name", user.name || nameParam);
       req.headers.set("x-user-avatar", JSON.stringify(avatarConfig));
 
       return req;
     } catch {
       // Auth service unreachable — allow with fallback
-      const name = url.searchParams.get("name") || "Anonymous";
       req.headers.set("x-user-id", "");
-      req.headers.set("x-user-name", name);
+      req.headers.set("x-user-name", nameParam);
       req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
       return req;
     }
