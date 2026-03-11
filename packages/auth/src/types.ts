@@ -1,9 +1,6 @@
-export interface AvatarConfig {
-  characterType: number;   // 0-4 (Oryx character row group)
-  colorVariant: number;    // 0-3 (column offset in spritesheet)
-  accessories?: string[];  // Phase 7: layered accessories
-  bodyColor?: string;      // Phase 7: hex color for programmatic recolor
-}
+import type { AvatarConfig } from '@flipfeeds/shared';
+
+export type { AvatarConfig };
 
 export interface AuthUser {
   id: string;
