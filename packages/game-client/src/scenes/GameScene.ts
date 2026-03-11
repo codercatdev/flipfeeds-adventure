@@ -607,12 +607,23 @@ export class GameScene extends Phaser.Scene {
 
     eventBus.on('PAUSE_INPUT', () => {
       this.inputPaused = true;
-      console.log('[GameScene] Input paused');
+      // Disable Phaser's keyboard plugin so keystrokes pass through to DOM (chat input, etc.)
+      if (this.input.keyboard) {
+        this.input.keyboard.enabled = false;
+      }
+      // Stop any current movement
+      this.playerBody?.setVelocity(0, 0);
+      console.log('[GameScene] Input paused — keyboard released to DOM');
     });
 
     eventBus.on('RESUME_INPUT', () => {
       this.inputPaused = false;
-      console.log('[GameScene] Input resumed');
+      if (this.input.keyboard) {
+        this.input.keyboard.enabled = true;
+        // Reset all key states to prevent stale isDown from firing
+        this.input.keyboard.resetKeys();
+      }
+      console.log('[GameScene] Input resumed — keyboard recaptured');
     });
 
     // Multiplayer connection
