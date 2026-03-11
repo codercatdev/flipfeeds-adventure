@@ -16,6 +16,10 @@ export interface PlayerState {
   dir: Direction;
   name?: string;
   anim?: string;
+  avatarConfig?: {
+    characterType: number;
+    colorVariant: number;
+  };
 }
 
 export interface PlayerDelta {
