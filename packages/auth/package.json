@@ -10,9 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "better-auth": "^1.2.0",
-    "kysely": "^0.27.0",
-    "kysely-d1": "^0.3.0",
+    "better-auth": "^1.5.0",
     "@flipfeeds/shared": "workspace:*"
   },
   "devDependencies": {
