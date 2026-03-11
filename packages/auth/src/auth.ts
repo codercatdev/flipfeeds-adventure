@@ -16,6 +16,7 @@ import type { AvatarConfig } from '@flipfeeds/shared';
 export function createAuth(d1: D1Database, env?: Record<string, string | undefined>) {
   return betterAuth({
     database: d1, // Native D1 support — auto-detected, no ORM needed
+    secret: env?.BETTER_AUTH_SECRET, // Required: set via wrangler secret put BETTER_AUTH_SECRET
 
     emailAndPassword: {
       enabled: false, // OAuth only — no password hashing (safe on CF free tier)

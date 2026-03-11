@@ -19,9 +19,15 @@ export interface AuthSession {
   user: AuthUser;
 }
 
-const authClient = createAuthClient({
-  baseURL: '/api/auth',
-});
+function getAuthClient() {
+  const baseURL =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/auth`
+      : 'https://app.flipfeeds.com/api/auth';
+  return createAuthClient({ baseURL });
+}
+
+const authClient = getAuthClient();
 
 interface UseAuthReturn {
   session: AuthSession | null;

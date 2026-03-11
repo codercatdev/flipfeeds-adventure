@@ -10,8 +10,10 @@
     "deploy": "vinext build && wrangler deploy --config dist/server/wrangler.json"
   },
   "dependencies": {
+    "@flipfeeds/auth": "workspace:*",
     "@flipfeeds/game-client": "workspace:*",
     "@flipfeeds/shared": "workspace:*",
+    "better-auth": "^1.5.0",
     "partysocket": "^1.1.16",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
