@@ -26,10 +26,30 @@ export class NetworkManager {
 
   private setupEventListeners(): void {
     // Server → Client events (from useWebSocket hook via EventBus)
+    eventBus.on('ROOM_STATE', this.onRoomState);
     eventBus.on('PLAYER_JOINED', this.onPlayerJoined);
     eventBus.on('PLAYER_LEFT', this.onPlayerLeft);
     eventBus.on('PLAYER_MOVED', this.onPlayerMoved);
   }
+
+  /** When game becomes ready, we get the current room so we can show players already in the room. */
+  private onRoomState = (data: {
+    id: string;
+    players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string }>;
+  }): void => {
+    this.setLocalPlayerId(data.id);
+    this.bootstrapPlayers(
+      data.players.map((p) => ({
+        id: p.id,
+        x: p.x,
+        y: p.y,
+        dir: p.direction,
+        name: p.name,
+        anim: p.anim,
+      })),
+    );
+    console.log(`[NetworkManager] Room state: ${data.players.length} player(s) already in room`);
+  };
 
   /** Called when we receive our player ID from the welcome message. */
   setLocalPlayerId(id: string): void {
@@ -191,6 +211,7 @@ export class NetworkManager {
 
   /** Clean up everything. */
   destroy(): void {
+    eventBus.off('ROOM_STATE', this.onRoomState);
     eventBus.off('PLAYER_JOINED', this.onPlayerJoined);
     eventBus.off('PLAYER_LEFT', this.onPlayerLeft);
     eventBus.off('PLAYER_MOVED', this.onPlayerMoved);

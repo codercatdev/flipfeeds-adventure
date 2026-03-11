@@ -232,6 +232,9 @@ export class GameScene extends Phaser.Scene {
 
   /** Build or rebuild walk/idle animations for a given avatar config. */
   private buildAnimationsForAvatar(config: AvatarConfig): void {
+    // Guard: scene may be shutting down or texture not loaded yet (e.g. remount race)
+    if (!this.textures?.exists('creatures')) return;
+
     const frames = getAvatarFrames(config);
 
     // Remove existing animations if rebuilding (avatar change)
@@ -278,8 +281,8 @@ export class GameScene extends Phaser.Scene {
       frameRate: 1,
     });
 
-    // Update the player's current frame to match new avatar
-    this.player.setFrame(frames.idleDown);
+    // Update the player's current frame to match new avatar (player may be gone if scene shutting down)
+    if (this.player) this.player.setFrame(frames.idleDown);
   }
 
   // ==========================================
@@ -596,6 +599,7 @@ export class GameScene extends Phaser.Scene {
 
   private setupEventBridge(): void {
     eventBus.on('AVATAR_SELECTED', (config: AvatarConfig) => {
+      if (!this.scene.isActive()) return;
       this.avatarConfig = config;
       this.buildAnimationsForAvatar(config);
       console.log('[GameScene] Avatar changed:', config);

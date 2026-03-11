@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import PartySocket from 'partysocket';
-import type { ServerMessage, ClientMessage, Direction } from '@flipfeeds/shared';
+import type { ServerMessage, ClientMessage, Direction, PlayerState } from '@flipfeeds/shared';
 import { eventBus } from '@flipfeeds/game-client/events';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected';
@@ -37,6 +37,8 @@ export function useWebSocket({
   const seqRef = useRef(0);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerIdRef = useRef<string | null>(null);
+  /** Stored welcome so we can send ROOM_STATE when the game becomes ready (it may not exist yet when welcome arrives) */
+  const welcomeRef = useRef<{ id: string; players: PlayerState[] } | null>(null);
 
   useEffect(() => {
     setStatus('connecting');
@@ -72,9 +74,10 @@ export function useWebSocket({
         case 'welcome': {
           playerIdRef.current = msg.id;
           setPlayerId(msg.id);
-          // Emit PLAYER_JOINED for every existing player
+          welcomeRef.current = { id: msg.id, players: msg.players };
           for (const p of msg.players) {
             playerPositions.set(p.id, { x: p.x, y: p.y });
+            if (p.id === msg.id) continue; // skip self — local player is already on screen
             eventBus.emit('PLAYER_JOINED', {
               id: p.id,
               x: p.x,
@@ -205,7 +208,23 @@ export function useWebSocket({
       }
     });
 
-    // ─── Subscribe to outgoing events ─────────────────────────
+    // When the game is ready, send current room state so it can show players already in the room
+    const onGameReady = () => {
+      const w = welcomeRef.current;
+      if (!w) return;
+      eventBus.emit('ROOM_STATE', {
+        id: w.id,
+        players: w.players.map((p) => ({
+          id: p.id,
+          x: p.x,
+          y: p.y,
+          direction: p.dir,
+          name: p.name,
+          anim: p.anim,
+        })),
+      });
+    };
+    eventBus.on('GAME_READY', onGameReady);
 
     eventBus.on('SEND_POSITION', handleSendPosition);
     eventBus.on('SEND_CHAT', handleSendChat);
@@ -213,8 +232,10 @@ export function useWebSocket({
     // ─── Cleanup ──────────────────────────────────────────────
 
     return () => {
+      eventBus.off('GAME_READY', onGameReady);
       eventBus.off('SEND_POSITION', handleSendPosition);
       eventBus.off('SEND_CHAT', handleSendChat);
+      welcomeRef.current = null;
 
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);

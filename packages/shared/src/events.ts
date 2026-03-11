@@ -57,6 +57,8 @@ export type GameEvents = {
   RESUME_INPUT: void;
 
   // Server -> Client (via EventBus after WebSocket processing)
+  /** Full room state sent when game becomes ready so it can show players already in the room */
+  ROOM_STATE: { id: string; players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string }> };
   PLAYER_JOINED: { id: string; x: number; y: number; direction: Direction; name: string };
   PLAYER_LEFT: { id: string };
   PLAYER_MOVED: { id: string; x: number; y: number; direction: Direction; anim?: string };
