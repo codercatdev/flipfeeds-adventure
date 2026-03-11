@@ -45,11 +45,8 @@ export default class GameServer implements Party.Server {
     const token = url.searchParams.get("token");
     const nameParam = url.searchParams.get("name") || "Anonymous";
 
-    console.log("[Auth] onBeforeConnect called, token:", token ? `${token.slice(0, 8)}...` : "NONE", "name:", nameParam);
-
     // No token = reject. Game requires authentication.
     if (!token) {
-      console.log("[Auth] No token — rejecting with 401");
       return new Response("Authentication required", { status: 401 });
     }
 
@@ -58,29 +55,24 @@ export default class GameServer implements Party.Server {
 
     try {
       // better-auth session endpoint is /get-session (NOT /session)
-      const fetchUrl = `${authUrl}/api/auth/get-session`;
-      console.log("[Auth] Fetching session from:", fetchUrl);
-
-      const res = await fetch(fetchUrl, {
+      const res = await fetch(`${authUrl}/api/auth/get-session`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      console.log("[Auth] Response status:", res.status);
+      console.log('[onBeforeConnect] Auth fetch status:', res.status, 'url:', `${authUrl}/api/auth/get-session`);
 
       if (!res.ok) {
-        console.log("[Auth] Non-OK response — falling back to name param");
+        console.log('[onBeforeConnect] Auth FAILED — status:', res.status, 'falling back to:', nameParam);
+        // Auth service returned error — allow with fallback name
         req.headers.set("x-user-id", "");
         req.headers.set("x-user-name", nameParam);
         req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
         return req;
       }
 
-      const rawBody = await res.text();
-      console.log("[Auth] Raw response body:", rawBody.slice(0, 500));
-
-      let session: {
+      const session = (await res.json()) as {
         user?: {
           id?: string;
           name?: string;
@@ -88,20 +80,11 @@ export default class GameServer implements Party.Server {
         };
       } | null;
 
-      try {
-        session = JSON.parse(rawBody);
-      } catch {
-        console.log("[Auth] Failed to parse JSON — falling back");
-        req.headers.set("x-user-id", "");
-        req.headers.set("x-user-name", nameParam);
-        req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
-        return req;
-      }
-
-      console.log("[Auth] Parsed session user:", JSON.stringify(session?.user ? { id: session.user.id, name: session.user.name, avatarConfig: session.user.avatarConfig } : null));
+      console.log('[onBeforeConnect] Session response:', JSON.stringify(session));
 
       if (!session?.user?.id) {
-        console.log("[Auth] No user ID in session — falling back");
+        console.log('[onBeforeConnect] No user ID in session — falling back');
+        // Valid response but no session — allow with fallback
         req.headers.set("x-user-id", "");
         req.headers.set("x-user-name", nameParam);
         req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
@@ -124,17 +107,17 @@ export default class GameServer implements Party.Server {
         }
       }
 
-      console.log("[Auth] ✅ Authenticated:", user.name, "id:", user.id, "avatar:", JSON.stringify(avatarConfig));
+      console.log('[onBeforeConnect] User:', user.name, 'avatarConfig raw:', user.avatarConfig, 'parsed:', JSON.stringify(avatarConfig));
 
       // Forward authenticated identity to onConnect via request headers
-      req.headers.set("x-user-id", user.id);
+      req.headers.set("x-user-id", user.id || "");
       req.headers.set("x-user-name", user.name || nameParam);
       req.headers.set("x-user-avatar", JSON.stringify(avatarConfig));
 
       return req;
     } catch (err) {
-      console.log("[Auth] Fetch error:", String(err));
       // Auth service unreachable — allow with fallback
+      console.log('[onBeforeConnect] Auth fetch THREW:', err);
       req.headers.set("x-user-id", "");
       req.headers.set("x-user-name", nameParam);
       req.headers.set("x-user-avatar", JSON.stringify(DEFAULT_AVATAR));
@@ -160,8 +143,6 @@ export default class GameServer implements Party.Server {
       avatarConfig = DEFAULT_AVATAR;
     }
 
-    console.log("[Connect] Player connected:", userName, "userId:", userId, "connId:", conn.id, "avatar:", JSON.stringify(avatarConfig));
-
     // Map this connection to the authenticated user
     this.connToUser.set(conn.id, userId);
     this.playerNames.set(userId, userName);
@@ -171,7 +152,6 @@ export default class GameServer implements Party.Server {
     if (existingTimer) {
       clearTimeout(existingTimer);
       this.disconnectTimers.delete(userId);
-      console.log("[Connect] Cancelled disconnect timer for", userId, "(reconnect)");
     }
 
     let player = this.players.get(userId);
@@ -196,8 +176,6 @@ export default class GameServer implements Party.Server {
 
     this.lastSeq.set(userId, 0);
     this.lastMoveTime.set(userId, Date.now());
-
-    console.log("[Connect] Total players:", this.players.size, "isReconnect:", isReconnect);
 
     // Send welcome with full player list (includes names + avatarConfigs)
     const welcome: ServerWelcomeMessage = {
@@ -302,8 +280,6 @@ export default class GameServer implements Party.Server {
     const userId = this.connToUser.get(conn.id);
     if (!userId) return;
 
-    console.log("[Disconnect] Player disconnected:", userId, "connId:", conn.id, "— starting", DISCONNECT_TIMEOUT / 1000, "s grace period");
-
     // Clean up the connection mapping immediately
     this.connToUser.delete(conn.id);
 
@@ -315,8 +291,6 @@ export default class GameServer implements Party.Server {
       this.lastMoveTime.delete(userId);
       this.playerNames.delete(userId);
 
-      console.log("[Disconnect] Grace period expired — removed player:", userId, "remaining:", this.players.size);
-
       const leaveMsg: ServerPlayerLeaveMessage = {
         type: "player-leave",
         id: userId,
@@ -326,7 +300,6 @@ export default class GameServer implements Party.Server {
       if (this.players.size === 0 && this.tickInterval !== null) {
         clearInterval(this.tickInterval);
         this.tickInterval = null;
-        console.log("[Disconnect] Room empty — tick loop stopped");
       }
     }, DISCONNECT_TIMEOUT);
 
