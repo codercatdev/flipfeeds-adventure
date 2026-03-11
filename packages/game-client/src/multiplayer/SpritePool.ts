@@ -39,7 +39,7 @@ export class SpritePool {
       entry.sprite.setVisible(true);
       entry.sprite.setActive(true);
       entry.label.setText(name || playerId.slice(0, 6));
-      entry.label.setPosition(x, y - 20);
+      entry.label.setPosition(x, y - 18);
       entry.label.setVisible(true);
       this.lifetimeRecycled++;
     } else {
@@ -51,12 +51,19 @@ export class SpritePool {
       body.setSize(16, 16);
       body.setOffset(4, 8);
 
-      const label = this.scene.add.text(x, y - 20, name || playerId.slice(0, 6), {
-        fontSize: '10px',
+      const label = this.scene.add.text(x, y - 18, name || playerId.slice(0, 6), {
+        fontSize: '9px',
         color: '#ffffff',
-        fontFamily: 'monospace',
-        backgroundColor: '#00000088',
-        padding: { x: 2, y: 1 },
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#1a1a2ecc',
+        padding: { x: 4, y: 2 },
+        shadow: {
+          offsetX: 0,
+          offsetY: 1,
+          color: '#000000',
+          blur: 2,
+          fill: true,
+        },
       }).setOrigin(0.5).setDepth(5);
 
       entry = { sprite, label, active: true, playerId, variant };
@@ -94,7 +101,7 @@ export class SpritePool {
     const entry = this.activeMap.get(playerId);
     if (!entry) return;
     entry.sprite.setPosition(x, y);
-    entry.label.setPosition(x, y - 20);
+    entry.label.setPosition(x, y - 18);
   }
 
   /** Get current pool stats. */

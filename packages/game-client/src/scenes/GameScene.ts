@@ -12,6 +12,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Sprite;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private currentDirection: Direction = 'idle';
+  private lastFacingDirection: 'down' | 'up' | 'left' | 'right' = 'down';
 
   // Multiplayer (Phase 3)
   private networkManager!: NetworkManager;
@@ -44,6 +45,11 @@ export class GameScene extends Phaser.Scene {
   // Debug overlay
   private debugGraphics: Phaser.GameObjects.Graphics | null = null;
   private debugVisible = false;
+
+  // Zone interaction cues
+  private zoneHighlights: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private zonePrompts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private pulseTimer = 0;
 
   // Interaction key
   private interactKey!: Phaser.Input.Keyboard.Key;
@@ -107,6 +113,9 @@ export class GameScene extends Phaser.Scene {
 
     // Phase 4: Interaction key checks
     this.checkInteractions();
+
+    // Phase 5: Zone interaction cues
+    this.updateZoneCues(delta);
   }
 
   // ==========================================
@@ -358,27 +367,127 @@ export class GameScene extends Phaser.Scene {
 
     switch (direction) {
       case 'down':
-      case 'down-left':
-      case 'down-right':
+        this.lastFacingDirection = 'down';
         this.player.play('walk-down', true);
-        if (direction === 'down-right') this.player.setFlipX(true);
+        break;
+      case 'down-left':
+        this.lastFacingDirection = 'left';
+        this.player.play('walk-down', true);
+        break;
+      case 'down-right':
+        this.lastFacingDirection = 'right';
+        this.player.play('walk-down', true);
+        this.player.setFlipX(true);
         break;
       case 'up':
-      case 'up-left':
-      case 'up-right':
+        this.lastFacingDirection = 'up';
         this.player.play('walk-up', true);
-        if (direction === 'up-right') this.player.setFlipX(true);
+        break;
+      case 'up-left':
+        this.lastFacingDirection = 'left';
+        this.player.play('walk-up', true);
+        break;
+      case 'up-right':
+        this.lastFacingDirection = 'right';
+        this.player.play('walk-up', true);
+        this.player.setFlipX(true);
         break;
       case 'left':
+        this.lastFacingDirection = 'left';
         this.player.play('walk-left', true);
         break;
       case 'right':
+        this.lastFacingDirection = 'right';
         this.player.play('walk-left', true);
         this.player.setFlipX(true);
         break;
-      case 'idle':
-        this.player.stop();
+      case 'idle': {
+        const idleFlip = this.lastFacingDirection === 'right';
+        const idleKey = this.lastFacingDirection === 'right' ? 'idle-left' : `idle-${this.lastFacingDirection}`;
+        this.player.play(idleKey, true);
+        this.player.setFlipX(idleFlip);
         break;
+      }
+    }
+  }
+
+  // ==========================================
+  // ZONE INTERACTION CUES (Phase 5)
+  // ==========================================
+
+  private updateZoneCues(delta: number): void {
+    this.pulseTimer += delta * 0.003; // slow pulse
+
+    for (const { body: zone, data } of this.zones) {
+      const dx = this.player.x - zone.x;
+      const dy = this.player.y - zone.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxDistance = data.radius * 24;
+      const isInProximity = distance <= maxDistance;
+      const isInZone = this.activeZones.has(data.zoneId);
+
+      // --- Highlight ring ---
+      let highlight = this.zoneHighlights.get(data.zoneId);
+      if (isInProximity) {
+        if (!highlight) {
+          highlight = this.add.graphics();
+          highlight.setDepth(2.5); // between decorations and player
+          this.zoneHighlights.set(data.zoneId, highlight);
+        }
+
+        highlight.clear();
+        const normalizedDist = Math.min(1, distance / maxDistance);
+        const alpha = (1 - normalizedDist) * 0.3 * (0.7 + 0.3 * Math.sin(this.pulseTimer));
+
+        const colors: Record<string, number> = {
+          chat: 0x00ff88,
+          kiosk: 0x4488ff,
+          video: 0xaa44ff,
+          webrtc: 0xff8844,
+          info: 0xffdd44,
+        };
+        const color = colors[data.zoneType] || 0xffffff;
+
+        const halfW = zone.width / 2;
+        const halfH = zone.height / 2;
+        highlight.lineStyle(2, color, alpha);
+        highlight.strokeRect(zone.x - halfW, zone.y - halfH, zone.width, zone.height);
+        highlight.fillStyle(color, alpha * 0.3);
+        highlight.fillRect(zone.x - halfW, zone.y - halfH, zone.width, zone.height);
+      } else if (highlight) {
+        highlight.destroy();
+        this.zoneHighlights.delete(data.zoneId);
+      }
+
+      // --- "Press E" / "Press T" prompt ---
+      let prompt = this.zonePrompts.get(data.zoneId);
+      if (isInZone) {
+        const promptText = (data.zoneType === 'chat' || data.zoneType === 'webrtc')
+          ? 'Press T'
+          : (data.zoneType === 'kiosk' || data.zoneType === 'info')
+            ? 'Press E'
+            : '';
+
+        if (promptText) {
+          if (!prompt) {
+            prompt = this.add.text(zone.x, zone.y - zone.height / 2 - 12, promptText, {
+              fontSize: '10px',
+              color: '#ffffff',
+              fontFamily: 'monospace',
+              backgroundColor: '#000000cc',
+              padding: { x: 4, y: 2 },
+            }).setOrigin(0.5).setDepth(5);
+            this.zonePrompts.set(data.zoneId, prompt);
+          }
+          // Pulse the prompt alpha
+          const promptAlpha = 0.7 + 0.3 * Math.sin(this.pulseTimer * 2);
+          prompt.setAlpha(promptAlpha);
+          prompt.setPosition(zone.x, zone.y - zone.height / 2 - 12);
+        }
+      } else if (prompt) {
+        prompt.destroy();
+        this.zonePrompts.delete(data.zoneId);
+      }
     }
   }
 
@@ -674,6 +783,10 @@ export class GameScene extends Phaser.Scene {
   destroy(): void {
     if (this.networkManager) this.networkManager.destroy();
     if (this.debugGraphics) this.debugGraphics.destroy();
+    this.zoneHighlights.forEach(g => g.destroy());
+    this.zoneHighlights.clear();
+    this.zonePrompts.forEach(t => t.destroy());
+    this.zonePrompts.clear();
     this.fpsHistory = [];
     this.zones = [];
     this.activeZones.clear();
