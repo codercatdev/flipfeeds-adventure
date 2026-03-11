@@ -56,22 +56,15 @@ function getPartyKitHost(): string {
   return 'localhost:1999';
 }
 
-/** Read the better-auth session token from cookies for WebSocket auth */
-function getSessionToken(): string | undefined {
-  if (typeof document === 'undefined') return undefined;
-  const match = document.cookie.match(/better-auth\.session_token=([^;]+)/);
-  return match?.[1];
-}
-
 export default function Home() {
-  const { session, isPending, isAuthenticated, hasAvatar, updateAvatar, signIn, signOut } = useAuth();
+  const { session, sessionToken, isPending, isAuthenticated, hasAvatar, updateAvatar, signIn, signOut } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
 
   const { status: wsStatus, latency, playerId } = useWebSocket({
     host: getPartyKitHost(),
     room: 'main',
     playerName: session?.user?.name || 'Player',
-    token: getSessionToken(),
+    token: sessionToken ?? undefined,
   });
 
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {
