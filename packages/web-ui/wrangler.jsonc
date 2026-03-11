@@ -1,11 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flipfeeds-web",
+  "name": "flipfeeds-adventure",
   "compatibility_date": "2025-03-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "vinext/server/app-router-entry",
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "single-page-application"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "flipfeeds_auth",
+      "database_name": "flipfeeds-auth",
+      "database_id": "49a4c485-6bed-4722-8d38-40a37efd66c8"
+    }
+  ],
+  // @flipfeeds/auth OAuth — set via: wrangler secret put <NAME>
+  // Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+  // GitHub: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 }
