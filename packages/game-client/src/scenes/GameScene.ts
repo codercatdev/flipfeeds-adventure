@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import eventBus from '../EventBus';
 import type { Direction, ZoneType } from '@flipfeeds/shared';
 import { NetworkManager } from '../multiplayer/NetworkManager';
+import { ZONE_COLORS, getZonePromptText, getIdleDirection } from '../utils';
 
 // Movement speed in pixels per second
 const PLAYER_SPEED = 168;
@@ -402,10 +403,9 @@ export class GameScene extends Phaser.Scene {
         this.player.setFlipX(true);
         break;
       case 'idle': {
-        const idleFlip = this.lastFacingDirection === 'right';
-        const idleKey = this.lastFacingDirection === 'right' ? 'idle-left' : `idle-${this.lastFacingDirection}`;
-        this.player.play(idleKey, true);
-        this.player.setFlipX(idleFlip);
+        const { animKey, flipX } = getIdleDirection(this.lastFacingDirection);
+        this.player.play(animKey, true);
+        this.player.setFlipX(flipX);
         break;
       }
     }
@@ -439,14 +439,7 @@ export class GameScene extends Phaser.Scene {
         const normalizedDist = Math.min(1, distance / maxDistance);
         const alpha = (1 - normalizedDist) * 0.3 * (0.7 + 0.3 * Math.sin(this.pulseTimer));
 
-        const colors: Record<string, number> = {
-          chat: 0x00ff88,
-          kiosk: 0x4488ff,
-          video: 0xaa44ff,
-          webrtc: 0xff8844,
-          info: 0xffdd44,
-        };
-        const color = colors[data.zoneType] || 0xffffff;
+        const color = ZONE_COLORS[data.zoneType] || 0xffffff;
 
         const halfW = zone.width / 2;
         const halfH = zone.height / 2;
@@ -462,11 +455,7 @@ export class GameScene extends Phaser.Scene {
       // --- "Press E" / "Press T" prompt ---
       let prompt = this.zonePrompts.get(data.zoneId);
       if (isInZone) {
-        const promptText = (data.zoneType === 'chat' || data.zoneType === 'webrtc')
-          ? 'Press T'
-          : (data.zoneType === 'kiosk' || data.zoneType === 'info')
-            ? 'Press E'
-            : '';
+        const promptText = getZonePromptText(data.zoneType);
 
         if (promptText) {
           if (!prompt) {
