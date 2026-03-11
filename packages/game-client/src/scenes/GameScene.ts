@@ -97,8 +97,13 @@ export class GameScene extends Phaser.Scene {
     this.networkManager = new NetworkManager(this);
 
     // === Signal ready ===
-    eventBus.emit('GAME_READY');
-    console.log('[GameScene] Created \u2014 GAME_READY emitted');
+    // Emit via microtask so create() fully returns before listeners fire.
+    // Fixes race: page.tsx re-emits AVATAR_SELECTED on GAME_READY,
+    // but this.scene isn't fully initialized until create() returns.
+    queueMicrotask(() => {
+      eventBus.emit('GAME_READY');
+      console.log('[GameScene] Created — GAME_READY emitted');
+    });
   }
 
   update(_time: number, delta: number): void {
@@ -599,7 +604,7 @@ export class GameScene extends Phaser.Scene {
 
   private setupEventBridge(): void {
     eventBus.on('AVATAR_SELECTED', (config: AvatarConfig) => {
-      if (!this.scene.isActive()) return;
+      if (!this.scene || !this.scene.isActive()) return;
       this.avatarConfig = config;
       this.buildAnimationsForAvatar(config);
       console.log('[GameScene] Avatar changed:', config);
