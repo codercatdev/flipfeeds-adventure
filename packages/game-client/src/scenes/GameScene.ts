@@ -711,13 +711,13 @@ export class GameScene extends Phaser.Scene {
   private checkInteractions(): void {
     if (this.inputPaused) return;
 
-    // E key — interact with kiosk/info zones
+    // E key — interact with kiosk/info/video zones
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       for (const zoneId of this.activeZones) {
         const zoneEntry = this.zones.find(z => z.data.zoneId === zoneId);
-        if (zoneEntry && (zoneEntry.data.zoneType === 'kiosk' || zoneEntry.data.zoneType === 'info')) {
+        if (zoneEntry && (zoneEntry.data.zoneType === 'kiosk' || zoneEntry.data.zoneType === 'info' || zoneEntry.data.zoneType === 'video')) {
           eventBus.emit('ZONE_INTERACT', {
-            zoneType: zoneEntry.data.zoneType as 'kiosk' | 'info',
+            zoneType: zoneEntry.data.zoneType as 'kiosk' | 'info' | 'video',
             zoneId,
           });
           console.log(`[GameScene] Interact: ${zoneId} (${zoneEntry.data.zoneType})`);
