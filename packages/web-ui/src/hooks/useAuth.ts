@@ -31,6 +31,7 @@ const authClient = getAuthClient();
 
 interface UseAuthReturn {
   session: AuthSession | null;
+  sessionToken: string | null;
   isPending: boolean;
   isAuthenticated: boolean;
   hasAvatar: boolean;
@@ -79,10 +80,18 @@ export function useAuth(): UseAuthReturn {
     await authClient.signOut();
   }, []);
 
+  // Extract session token for WebSocket auth
+  // better-auth's useSession() returns { user, session } where session has a token field
+  const sessionToken = useMemo<string | null>(() => {
+    if (!rawSession?.session) return null;
+    return (rawSession.session as Record<string, unknown>).token as string ?? null;
+  }, [rawSession]);
+
   const hasAvatar = session?.user?.avatarConfig !== null && session?.user?.avatarConfig !== undefined;
 
   return {
     session,
+    sessionToken,
     isPending,
     isAuthenticated: session !== null,
     hasAvatar,

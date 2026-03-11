@@ -75,7 +75,7 @@ export interface ZoneProximityPayload {
 }
 
 export interface ZoneInteractPayload {
-  zoneType: 'kiosk' | 'info';
+  zoneType: 'kiosk' | 'info' | 'video';
   zoneId: string;
 }
 
