@@ -71,8 +71,10 @@ export default function Home() {
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {
     await updateAvatar(config);
     setShowPicker(false);
-    // Note: Don't emit AVATAR_SELECTED here — GameCanvas isn't mounted yet on first pick.
-    // The useEffect below handles emitting after GAME_READY.
+    // Emit directly — if game is already mounted (avatar change, not first pick),
+    // this updates the sprite immediately. On first pick, the useEffect below
+    // handles it via GAME_READY.
+    eventBus.emit('AVATAR_SELECTED', config);
   }, [updateAvatar]);
 
   // Emit saved avatar config once the game engine is ready.

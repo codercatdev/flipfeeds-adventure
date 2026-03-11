@@ -41,6 +41,9 @@ export function useWebSocket({
   const seqRef = useRef(0);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerIdRef = useRef<string | null>(null);
+  // Token as ref — session refreshes (e.g. avatar save) shouldn't trigger reconnect
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
   /** Stored welcome so we can send ROOM_STATE when the game becomes ready (it may not exist yet when welcome arrives) */
   const welcomeRef = useRef<{ id: string; players: PlayerState[] } | null>(null);
 
@@ -56,7 +59,7 @@ export function useWebSocket({
     const socket = new PartySocket({
       host,
       room,
-      query: { ...(token ? { token } : {}), name: playerName },
+      query: { ...(tokenRef.current ? { token: tokenRef.current } : {}), name: playerName },
     });
 
     socketRef.current = socket;
@@ -261,7 +264,7 @@ export function useWebSocket({
       playerPositions.clear();
       socket.close();
     };
-  }, [host, room, playerName, token, enabled]);
+  }, [host, room, playerName, enabled]);
 
   return { status, playerId, latency };
 }
