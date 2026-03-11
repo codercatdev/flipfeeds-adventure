@@ -6,6 +6,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import { AvatarPicker } from '../components/AvatarPicker';
+import { LoginScreen } from '../components/LoginScreen';
 import { eventBus } from '@flipfeeds/game-client/events';
 
 // Dynamic import Phaser (it needs window/document)
@@ -49,7 +50,7 @@ function getPartyKitHost(): string {
 }
 
 export default function Home() {
-  const { session, isPending, hasAvatar, updateAvatar } = useAuth();
+  const { session, isPending, isAuthenticated, hasAvatar, updateAvatar, signIn, signOut } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
 
   const { status: wsStatus, latency, playerId } = useWebSocket({
@@ -93,6 +94,11 @@ export default function Home() {
         Loading...
       </div>
     );
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <LoginScreen onSignIn={signIn} />;
   }
 
   // Show avatar picker on first visit (no avatar saved) or when explicitly opened

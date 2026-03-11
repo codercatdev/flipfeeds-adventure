@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { createAuthClient } from 'better-auth/react';
+import { useMemo, useCallback } from 'react';
 
 export interface AvatarConfig {
   characterType: number;
@@ -18,53 +19,69 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+const authClient = createAuthClient({
+  baseURL: '/api/auth',
+});
+
 interface UseAuthReturn {
   session: AuthSession | null;
   isPending: boolean;
   isAuthenticated: boolean;
   hasAvatar: boolean;
   updateAvatar: (config: AvatarConfig) => Promise<void>;
+  signIn: (provider: 'google' | 'github') => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-/**
- * Mock auth hook — simulates better-auth useSession().
- * Uses localStorage to persist avatar selection.
- * Will be replaced with real auth client from @flipfeeds/auth.
- */
 export function useAuth(): UseAuthReturn {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [isPending, setIsPending] = useState(true);
+  const { data: rawSession, isPending } = authClient.useSession();
 
-  useEffect(() => {
-    // Simulate loading session from localStorage
-    const stored = localStorage.getItem('flipfeeds-avatar');
-    const avatarConfig = stored ? JSON.parse(stored) as AvatarConfig : null;
+  // Parse avatarConfig from JSON string to object
+  const session = useMemo<AuthSession | null>(() => {
+    if (!rawSession?.user) return null;
 
-    // Mock user — in production this comes from better-auth OAuth
-    setSession({
+    let avatarConfig: AvatarConfig | null = null;
+    if (rawSession.user.avatarConfig) {
+      try {
+        avatarConfig = JSON.parse(rawSession.user.avatarConfig as string);
+      } catch {
+        avatarConfig = null;
+      }
+    }
+
+    return {
       user: {
-        id: 'mock-user-' + Math.random().toString(36).slice(2, 8),
-        name: 'Player',
-        email: 'player@flipfeeds.dev',
+        id: rawSession.user.id,
+        name: rawSession.user.name || 'Player',
+        email: rawSession.user.email || '',
         avatarConfig,
       },
-    });
-    setIsPending(false);
-  }, []);
+    };
+  }, [rawSession]);
 
   const updateAvatar = useCallback(async (config: AvatarConfig) => {
-    localStorage.setItem('flipfeeds-avatar', JSON.stringify(config));
-    setSession(prev => prev ? {
-      ...prev,
-      user: { ...prev.user, avatarConfig: config },
-    } : null);
+    await authClient.updateUser({
+      avatarConfig: JSON.stringify(config),
+    });
   }, []);
+
+  const signIn = useCallback(async (provider: 'google' | 'github') => {
+    await authClient.signIn.social({ provider });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await authClient.signOut();
+  }, []);
+
+  const hasAvatar = session?.user?.avatarConfig !== null && session?.user?.avatarConfig !== undefined;
 
   return {
     session,
     isPending,
     isAuthenticated: session !== null,
-    hasAvatar: session?.user?.avatarConfig !== null && session?.user?.avatarConfig !== undefined,
+    hasAvatar,
     updateAvatar,
+    signIn,
+    signOut,
   };
 }
