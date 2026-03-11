@@ -51,42 +51,38 @@
   --radius-lg: calc(var(--radius) + 4px);
 }
 
-/* Game-specific base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* Game-specific base styles — wrapped in @layer base so Tailwind utilities can override */
+@layer base {
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: hsl(222 47% 11%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
 
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: hsl(222 47% 11%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
+  #game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
 
-#game-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
+  #ui-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+  }
 
-#ui-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  pointer-events: none;
-}
-
-#ui-overlay > * {
-  pointer-events: auto;
+  #ui-overlay > * {
+    pointer-events: auto;
+  }
 }
 
 @keyframes fadeIn {
