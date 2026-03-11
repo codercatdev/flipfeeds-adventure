@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { useGameEvent } from '../../hooks/useGameEvent';
 import { ChatBubbleManager } from './ChatBubbleManager';
-import { ChatInput } from './ChatInput';
 import { KioskModal } from './KioskModal';
 import { VideoPanel } from './VideoPanel';
 import type { ZoneType } from '@flipfeeds/shared';
@@ -16,7 +15,6 @@ interface ActiveZone {
 export function ZoneManager() {
   const [activeZones, setActiveZones] = useState<ActiveZone[]>([]);
   const [activeKiosk, setActiveKiosk] = useState<{ zoneId: string; zoneType: 'kiosk' | 'info' } | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
   const [currentChatZoneId, setCurrentChatZoneId] = useState<string | null>(null);
 
   // Track zone enter/exit
@@ -33,18 +31,13 @@ export function ZoneManager() {
 
   useGameEvent('ZONE_EXIT', useCallback((data) => {
     setActiveZones(prev => prev.filter(z => z.zoneId !== data.zoneId));
-    // Close chat if leaving a chat zone (but let bubbles fade naturally)
+    // Close chat zone tracking if leaving
     if (data.zoneType === 'chat') {
-      setChatOpen(false);
       setCurrentChatZoneId(prev => prev === data.zoneId ? null : prev);
     }
   }, []));
 
-  // Handle chat open (player pressed T/Enter in chat zone)
-  useGameEvent('CHAT_OPEN' as any, useCallback((data: { zoneId: string }) => {
-    setChatOpen(true);
-    setCurrentChatZoneId(data.zoneId);
-  }, []));
+  // CHAT_OPEN is now handled by ChatSheet in page.tsx
 
   // Handle kiosk/info interaction (player pressed E)
   useGameEvent('ZONE_INTERACT', useCallback((data) => {
@@ -60,13 +53,7 @@ export function ZoneManager() {
       {/* Chat bubbles — always rendered, but filtered by current zone */}
       <ChatBubbleManager currentZoneId={currentChatZoneId} />
 
-      {/* Chat input — when in a chat zone and chat is open */}
-      {activeChatZone && chatOpen && (
-        <ChatInput
-          zoneId={activeChatZone.zoneId}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
+      {/* Chat input is now handled by ChatSheet in page.tsx (shadcn Sheet with PAUSE_INPUT) */}
 
       {/* Video panels — auto-show when in video zones */}
       {activeVideoZones.map(zone => (
