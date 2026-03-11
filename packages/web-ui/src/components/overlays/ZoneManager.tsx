@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { useGameEvent } from '../../hooks/useGameEvent';
 import { ChatBubbleManager } from './ChatBubbleManager';
 import { KioskModal } from './KioskModal';
-import { VideoPanel } from './VideoPanel';
 import type { ZoneType } from '@flipfeeds/shared';
 
 interface ActiveZone {
@@ -46,7 +45,6 @@ export function ZoneManager() {
 
   // Derived state
   const activeChatZone = activeZones.find(z => z.zoneType === 'chat');
-  const activeVideoZones = activeZones.filter(z => z.zoneType === 'video');
 
   return (
     <>
@@ -55,14 +53,7 @@ export function ZoneManager() {
 
       {/* Chat input is now handled by ChatSheet in page.tsx (shadcn Sheet with PAUSE_INPUT) */}
 
-      {/* Video panels — auto-show when in video zones */}
-      {activeVideoZones.map(zone => (
-        <VideoPanel
-          key={zone.zoneId}
-          zoneId={zone.zoneId}
-          onClose={() => setActiveZones(prev => prev.filter(z => z.zoneId !== zone.zoneId))}
-        />
-      ))}
+      {/* Video zones are now handled by VideoDialog in page.tsx (shadcn Dialog with PAUSE_INPUT) */}
 
       {/* Kiosk/Info modal */}
       {activeKiosk && (
