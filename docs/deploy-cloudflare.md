@@ -27,7 +27,7 @@ pnpm build && wrangler deploy --config dist/server/wrangler.json
 
 ### Environment: PartyKit host
 
-The client connects to the PartyKit server using a host set at **build time**. For production, set:
+The client connects to the PartyKit server using a host set at **build time**. If you see `WebSocket connection to 'ws://localhost:1999/...' failed` on the deployed site, the UI was built without the production host. For production, set:
 
 ```bash
 VITE_PARTYKIT_HOST=flipfeeds-multiplayer.<your-partykit-host>

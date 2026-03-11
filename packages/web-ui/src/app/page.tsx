@@ -47,6 +47,10 @@ function getPartyKitHost(): string {
   } catch {
     // import.meta.env not available
   }
+  // Deployed app: use same origin so PartyKit can be reached (e.g. same domain or proxy)
+  if (typeof window !== 'undefined' && window.location?.hostname !== 'localhost') {
+    return window.location.host;
+  }
   return 'localhost:1999';
 }
 

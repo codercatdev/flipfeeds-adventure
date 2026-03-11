@@ -42,7 +42,7 @@ export function UserInfoHUD({ userName, avatarConfig, onChangeAvatar, onSignOut 
       <div style={{
         width: '48px',
         height: '48px',
-        backgroundImage: 'url(/assets/tilesets/creatures.png)',
+        backgroundImage: 'url(/assets/tilesets/oryx_16bit_scifi_creatures_trans.png)',
         backgroundPosition: `-${spritePos.x * 2}px -${spritePos.y * 2}px`,
         backgroundSize: `${32 * 24 * 2}px auto`,
         imageRendering: 'pixelated',
