@@ -54,6 +54,7 @@ function SpriteFrame({ row, colOffset, scale = 3, walkFrame = 0 }: {
           transformOrigin: '0 0',
           marginLeft: -x * scale,
           marginTop: -y * scale,
+          maxWidth: 'none',
         }}
       />
     </div>

@@ -65,6 +65,7 @@ export default function Home() {
     room: 'main',
     playerName: session?.user?.name || 'Player',
     token: sessionToken ?? undefined,
+    enabled: isAuthenticated && !isPending,
   });
 
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {

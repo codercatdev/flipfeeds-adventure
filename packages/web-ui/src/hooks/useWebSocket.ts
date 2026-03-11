@@ -12,6 +12,7 @@ interface UseWebSocketOptions {
   room?: string;
   playerName?: string;
   token?: string;  // auth session token
+  enabled?: boolean;  // gate connection on auth ready
 }
 
 interface UseWebSocketReturn {
@@ -31,6 +32,7 @@ export function useWebSocket({
   room = 'main',
   playerName = 'Anonymous',
   token,
+  enabled = true,
 }: UseWebSocketOptions): UseWebSocketReturn {
   const socketRef = useRef<PartySocket | null>(null);
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
@@ -43,6 +45,12 @@ export function useWebSocket({
   const welcomeRef = useRef<{ id: string; players: PlayerState[] } | null>(null);
 
   useEffect(() => {
+    // Don't connect until auth is ready
+    if (!enabled) {
+      setStatus('disconnected');
+      return;
+    }
+
     setStatus('connecting');
 
     const socket = new PartySocket({
@@ -253,7 +261,7 @@ export function useWebSocket({
       playerPositions.clear();
       socket.close();
     };
-  }, [host, room, playerName, token]);
+  }, [host, room, playerName, token, enabled]);
 
   return { status, playerId, latency };
 }
