@@ -57,6 +57,7 @@ export default function Home() {
   const { status: wsStatus, latency, playerId } = useWebSocket({
     host: getPartyKitHost(),
     room: 'main',
+    playerName: session?.user?.name || 'Player',
   });
 
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {
