@@ -18,11 +18,8 @@ export function createAuth(d1: D1Database, env?: Record<string, string | undefin
   return betterAuth({
     database: d1, // Native D1 support — auto-detected, no ORM needed
     secret: env?.BETTER_AUTH_SECRET, // Required: set via wrangler secret put BETTER_AUTH_SECRET
-    baseURL: env?.BETTER_AUTH_URL, // Required for OAuth callbacks in production
 
-    plugins: [
-      bearer(), // Enables Authorization: Bearer <token> on all endpoints (needed for PartyKit)
-    ],
+    plugins: [bearer()], // Enables Authorization: Bearer <token> for server-to-server auth (PartyKit)
 
     emailAndPassword: {
       enabled: false, // OAuth only — no password hashing (safe on CF free tier)
