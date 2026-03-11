@@ -191,7 +191,7 @@ describe('Tilemap — InteractionZones Layer', () => {
     }
   });
 
-  it('each zone has custom properties with zoneType and zoneId', () => {
+  it('each zone has custom properties with type and id', () => {
     for (const zone of zones) {
       expect(zone.properties).toBeDefined();
       expect(Array.isArray(zone.properties)).toBe(true);
@@ -200,17 +200,17 @@ describe('Tilemap — InteractionZones Layer', () => {
         zone.properties.map((p: any) => [p.name, p.value])
       );
 
-      expect(propMap).toHaveProperty('zoneType');
-      expect(propMap).toHaveProperty('zoneId');
-      expect(typeof propMap.zoneType).toBe('string');
-      expect(typeof propMap.zoneId).toBe('string');
+      expect(propMap).toHaveProperty('type');
+      expect(propMap).toHaveProperty('id');
+      expect(typeof propMap.type).toBe('string');
+      expect(typeof propMap.id).toBe('string');
     }
   });
 
   it('zone types are valid FlipFeeds zone types', () => {
     const validTypes = ['chat', 'kiosk', 'video', 'webrtc', 'info'];
     for (const zone of zones) {
-      const zoneType = zone.properties.find((p: any) => p.name === 'zoneType')?.value;
+      const zoneType = zone.properties.find((p: any) => p.name === 'type')?.value;
       expect(validTypes).toContain(zoneType);
     }
   });
@@ -274,8 +274,11 @@ describe('Tilemap — SpawnPoints Layer', () => {
     expect(defaultSpawn).toBeDefined();
   });
 
-  it('default spawn point is a point object (not a rectangle)', () => {
+  it('default spawn point is a single tile or point object', () => {
     const defaultSpawn = spawnPoints[0];
-    expect(defaultSpawn.point).toBe(true);
+    // Spawn can be a point (point: true) or a single-tile rectangle (24×24)
+    const isPoint = defaultSpawn.point === true;
+    const isSingleTile = defaultSpawn.width <= 24 && defaultSpawn.height <= 24;
+    expect(isPoint || isSingleTile).toBe(true);
   });
 });

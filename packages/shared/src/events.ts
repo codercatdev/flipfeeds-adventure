@@ -1,4 +1,5 @@
 import type { Direction } from './player';
+import type { AvatarConfig } from './avatar';
 import type { ZoneEnterPayload, ZoneExitPayload, ZoneProximityPayload, ZoneInteractPayload } from './zones';
 
 // === Telemetry Types (Observability Contract with @qa) ===
@@ -49,6 +50,7 @@ export type GameEvents = {
   PLAYER_POSITION: { x: number; y: number; direction: Direction };
 
   // React -> Phaser
+  AVATAR_SELECTED: AvatarConfig;
   CHAT_SEND: { message: string };
   KIOSK_CLOSED: void;
   PAUSE_INPUT: void;

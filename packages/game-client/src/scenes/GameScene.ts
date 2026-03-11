@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import eventBus from '../EventBus';
-import type { Direction, ZoneType } from '@flipfeeds/shared';
+import type { Direction, ZoneType, AvatarConfig } from '@flipfeeds/shared';
+import { getAvatarFrames, DEFAULT_AVATAR } from '@flipfeeds/shared';
 import { NetworkManager } from '../multiplayer/NetworkManager';
 import { ZONE_COLORS, getZonePromptText, getIdleDirection } from '../utils';
 
@@ -13,6 +14,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Sprite;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private currentDirection: Direction = 'idle';
+  private avatarConfig: AvatarConfig = DEFAULT_AVATAR;
   private lastFacingDirection: 'down' | 'up' | 'left' | 'right' = 'down';
 
   // Multiplayer (Phase 3)
@@ -218,48 +220,60 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPlayerAnimations(): void {
-    // Walk animations from Oryx creatures spritesheet
-    // Row 13 = walk-down, Row 14 = walk-up, Row 15 = walk-left
+    this.buildAnimationsForAvatar(this.avatarConfig);
+    console.log('[GameScene] Player animations created');
+  }
+
+  /** Build or rebuild walk/idle animations for a given avatar config. */
+  private buildAnimationsForAvatar(config: AvatarConfig): void {
+    const frames = getAvatarFrames(config);
+
+    // Remove existing animations if rebuilding (avatar change)
+    ['walk-down', 'walk-up', 'walk-left', 'idle-down', 'idle-up', 'idle-left'].forEach(key => {
+      if (this.anims.exists(key)) this.anims.remove(key);
+    });
+
     this.anims.create({
       key: 'walk-down',
-      frames: this.anims.generateFrameNumbers('creatures', { frames: [416, 417, 418, 419] }),
+      frames: this.anims.generateFrameNumbers('creatures', { frames: frames.walkDown }),
       frameRate: 8,
       repeat: -1,
     });
 
     this.anims.create({
       key: 'walk-up',
-      frames: this.anims.generateFrameNumbers('creatures', { frames: [448, 449, 450, 451] }),
+      frames: this.anims.generateFrameNumbers('creatures', { frames: frames.walkUp }),
       frameRate: 8,
       repeat: -1,
     });
 
     this.anims.create({
       key: 'walk-left',
-      frames: this.anims.generateFrameNumbers('creatures', { frames: [480, 481, 482, 483] }),
+      frames: this.anims.generateFrameNumbers('creatures', { frames: frames.walkLeft }),
       frameRate: 8,
       repeat: -1,
     });
 
     this.anims.create({
       key: 'idle-down',
-      frames: [{ key: 'creatures', frame: 416 }],
+      frames: [{ key: 'creatures', frame: frames.idleDown }],
       frameRate: 1,
     });
 
     this.anims.create({
       key: 'idle-up',
-      frames: [{ key: 'creatures', frame: 448 }],
+      frames: [{ key: 'creatures', frame: frames.idleUp }],
       frameRate: 1,
     });
 
     this.anims.create({
       key: 'idle-left',
-      frames: [{ key: 'creatures', frame: 480 }],
+      frames: [{ key: 'creatures', frame: frames.idleLeft }],
       frameRate: 1,
     });
 
-    console.log('[GameScene] Player animations created');
+    // Update the player's current frame to match new avatar
+    this.player.setFrame(frames.idleDown);
   }
 
   // ==========================================
@@ -575,6 +589,12 @@ export class GameScene extends Phaser.Scene {
   // ==========================================
 
   private setupEventBridge(): void {
+    eventBus.on('AVATAR_SELECTED', (config: AvatarConfig) => {
+      this.avatarConfig = config;
+      this.buildAnimationsForAvatar(config);
+      console.log('[GameScene] Avatar changed:', config);
+    });
+
     eventBus.on('PAUSE_INPUT', () => {
       this.inputPaused = true;
       console.log('[GameScene] Input paused');
@@ -591,6 +611,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.events.on('shutdown', () => {
+      eventBus.off('AVATAR_SELECTED');
       eventBus.off('PAUSE_INPUT');
       eventBus.off('RESUME_INPUT');
       eventBus.off('CONNECT');

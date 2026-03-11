@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import eventBus from '../EventBus';
+import type { AvatarConfig } from '@flipfeeds/shared';
+import { getAvatarFrames, DEFAULT_AVATAR } from '@flipfeeds/shared';
 
 interface PooledSprite {
   sprite: Phaser.GameObjects.Sprite;
@@ -7,6 +9,7 @@ interface PooledSprite {
   active: boolean;
   playerId: string | null;
   variant: number;
+  avatarConfig: AvatarConfig;
 }
 
 // Character color variant column offsets in the creatures spritesheet
@@ -26,7 +29,7 @@ export class SpritePool {
   }
 
   /** Acquire a sprite for a player. Reuses from pool or creates new. */
-  acquire(playerId: string, x: number, y: number, name?: string): PooledSprite {
+  acquire(playerId: string, x: number, y: number, name?: string, avatarConfig?: AvatarConfig): PooledSprite {
     const existing = this.activeMap.get(playerId);
     if (existing) return existing;
 
@@ -43,8 +46,9 @@ export class SpritePool {
       entry.label.setVisible(true);
       this.lifetimeRecycled++;
     } else {
-      const variant = this.getVariantOffset(playerId);
-      const sprite = this.scene.add.sprite(x, y, 'creatures', 416 + variant);
+      const config = avatarConfig || { characterType: 0, colorVariant: this.getVariantIndex(playerId) };
+      const frames = getAvatarFrames(config);
+      const sprite = this.scene.add.sprite(x, y, 'creatures', frames.idleDown);
       sprite.setDepth(3);
       this.scene.physics.add.existing(sprite);
       const body = sprite.body as Phaser.Physics.Arcade.Body;
@@ -66,7 +70,8 @@ export class SpritePool {
         },
       }).setOrigin(0.5).setDepth(5);
 
-      entry = { sprite, label, active: true, playerId, variant };
+      const variant = this.getVariantOffset(playerId);
+      entry = { sprite, label, active: true, playerId, variant, avatarConfig: config };
       this.pool.push(entry);
       this.lifetimeCreated++;
     }
@@ -137,5 +142,14 @@ export class SpritePool {
       hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
     }
     return PLAYER_VARIANTS[Math.abs(hash) % PLAYER_VARIANTS.length];
+  }
+
+  /** Get variant index (0-3) from player ID hash — for fallback when no avatar config. */
+  private getVariantIndex(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % PLAYER_VARIANTS.length;
   }
 }

@@ -19,3 +19,12 @@ export type {
   PoolStats,
 } from './events';
 export * from './zones';
+export type { AvatarConfig } from './avatar';
+export {
+  CHARACTER_TYPES,
+  COLOR_VARIANTS,
+  SPRITE_COLS,
+  DEFAULT_AVATAR,
+  getAvatarFrames,
+  getFramePixelPosition,
+} from './avatar';
