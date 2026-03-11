@@ -392,50 +392,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayerAnimation(direction: Direction): void {
+    // TEMPORARY: Always show idle-down frame for avatar verification.
+    // Makes it easy to confirm avatar selection works across players.
+    // TODO: Re-enable directional animations once avatar system is solid.
     this.player.setFlipX(false);
+    const frames = getAvatarFrames(this.avatarConfig);
+    this.player.setFrame(frames.idleDown);
 
+    // Still track facing direction for future re-enable
     switch (direction) {
-      case 'down':
-        this.lastFacingDirection = 'down';
-        this.player.play('walk-down', true);
+      case 'down': case 'down-left': case 'down-right':
+        this.lastFacingDirection = direction === 'down-right' ? 'right' : direction === 'down-left' ? 'left' : 'down';
         break;
-      case 'down-left':
-        this.lastFacingDirection = 'left';
-        this.player.play('walk-down', true);
-        break;
-      case 'down-right':
-        this.lastFacingDirection = 'right';
-        this.player.play('walk-down', true);
-        this.player.setFlipX(true);
-        break;
-      case 'up':
-        this.lastFacingDirection = 'up';
-        this.player.play('walk-up', true);
-        break;
-      case 'up-left':
-        this.lastFacingDirection = 'left';
-        this.player.play('walk-up', true);
-        break;
-      case 'up-right':
-        this.lastFacingDirection = 'right';
-        this.player.play('walk-up', true);
-        this.player.setFlipX(true);
+      case 'up': case 'up-left': case 'up-right':
+        this.lastFacingDirection = direction === 'up-right' ? 'right' : direction === 'up-left' ? 'left' : 'up';
         break;
       case 'left':
         this.lastFacingDirection = 'left';
-        this.player.play('walk-left', true);
         break;
       case 'right':
         this.lastFacingDirection = 'right';
-        this.player.play('walk-left', true);
-        this.player.setFlipX(true);
         break;
-      case 'idle': {
-        const { animKey, flipX } = getIdleDirection(this.lastFacingDirection);
-        this.player.play(animKey, true);
-        this.player.setFlipX(flipX);
-        break;
-      }
     }
   }
 
@@ -607,6 +584,9 @@ export class GameScene extends Phaser.Scene {
       if (!this.scene || !this.scene.isActive()) return;
       this.avatarConfig = config;
       this.buildAnimationsForAvatar(config);
+      // Explicitly set frame in case buildAnimationsForAvatar guard skipped it
+      const frames = getAvatarFrames(config);
+      if (this.player) this.player.setFrame(frames.idleDown);
       console.log('[GameScene] Avatar changed:', config);
     });
 
