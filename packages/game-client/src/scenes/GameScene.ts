@@ -69,6 +69,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // === Check for initial avatar config (passed via scene data or EventBus) ===
+    const initData = this.scene.settings.data as { avatarConfig?: AvatarConfig } | undefined;
+    if (initData?.avatarConfig) {
+      this.avatarConfig = initData.avatarConfig;
+    }
+
     // === Build the world ===
     this.createTilemap();
 
