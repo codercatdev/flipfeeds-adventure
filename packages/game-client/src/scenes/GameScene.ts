@@ -551,8 +551,8 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      const zoneType = props['zoneType'] as string | undefined;
-      const zoneId = props['zoneId'] as string | undefined;
+      const zoneType = (props['zoneType'] || props['type']) as string | undefined;
+      const zoneId = (props['zoneId'] || props['id']) as string | undefined;
       const radius = (props['radius'] as number) || 2;
 
       if (!zoneType || !zoneId) continue;
