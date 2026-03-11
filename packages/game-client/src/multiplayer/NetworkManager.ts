@@ -1,5 +1,5 @@
 import eventBus from '../EventBus';
-import type { Direction } from '@flipfeeds/shared';
+import type { Direction, AvatarConfig } from '@flipfeeds/shared';
 import { SpritePool } from './SpritePool';
 import { InterpolationManager } from './InterpolationManager';
 import { PredictionManager } from './PredictionManager';
@@ -35,7 +35,7 @@ export class NetworkManager {
   /** When game becomes ready, we get the current room so we can show players already in the room. */
   private onRoomState = (data: {
     id: string;
-    players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string }>;
+    players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string; avatarConfig?: AvatarConfig }>;
   }): void => {
     this.setLocalPlayerId(data.id);
     this.bootstrapPlayers(
@@ -154,11 +154,12 @@ export class NetworkManager {
       dir: Direction;
       name?: string;
       anim?: string;
+      avatarConfig?: AvatarConfig;
     }>,
   ): void {
     for (const p of players) {
       if (p.id === this.localPlayerId) continue; // Skip local player
-      this.pool.acquire(p.id, p.x, p.y, p.name);
+      this.pool.acquire(p.id, p.x, p.y, p.name, p.avatarConfig);
       this.interpolation.initPlayer(p.id, p.x, p.y, p.dir, p.anim);
     }
   }
@@ -169,9 +170,10 @@ export class NetworkManager {
     y: number;
     direction: Direction;
     name: string;
+    avatarConfig?: AvatarConfig;
   }): void => {
     if (data.id === this.localPlayerId) return;
-    this.pool.acquire(data.id, data.x, data.y, data.name);
+    this.pool.acquire(data.id, data.x, data.y, data.name, data.avatarConfig);
     this.interpolation.initPlayer(
       data.id,
       data.x,

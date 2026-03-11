@@ -58,8 +58,8 @@ export type GameEvents = {
 
   // Server -> Client (via EventBus after WebSocket processing)
   /** Full room state sent when game becomes ready so it can show players already in the room */
-  ROOM_STATE: { id: string; players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string }> };
-  PLAYER_JOINED: { id: string; x: number; y: number; direction: Direction; name: string };
+  ROOM_STATE: { id: string; players: Array<{ id: string; x: number; y: number; direction: Direction; name?: string; anim?: string; avatarConfig?: AvatarConfig }> };
+  PLAYER_JOINED: { id: string; x: number; y: number; direction: Direction; name: string; avatarConfig?: AvatarConfig };
   PLAYER_LEFT: { id: string };
   PLAYER_MOVED: { id: string; x: number; y: number; direction: Direction; anim?: string };
   CHAT_RECEIVED: { playerId: string; message: string; x: number; y: number };

@@ -44,6 +44,11 @@ export class SpritePool {
       entry.label.setText(name || playerId.slice(0, 6));
       entry.label.setPosition(x, y - 18);
       entry.label.setVisible(true);
+      // Update avatar config and sprite frame for recycled sprites
+      const config = avatarConfig || entry.avatarConfig || { characterType: 0, colorVariant: this.getVariantIndex(playerId) };
+      entry.avatarConfig = config;
+      const frames = getAvatarFrames(config);
+      entry.sprite.setFrame(frames.idleDown);
       this.lifetimeRecycled++;
     } else {
       const config = avatarConfig || { characterType: 0, colorVariant: this.getVariantIndex(playerId) };
