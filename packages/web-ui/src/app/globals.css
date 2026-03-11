@@ -1,3 +1,57 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: hsl(222 47% 11%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222 47% 11%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222 47% 11%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(142 71% 45%);
+  --primary-foreground: hsl(144 80% 10%);
+  --secondary: hsl(217 33% 17%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(217 33% 17%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(217 33% 17%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 63% 31%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(217 33% 17%);
+  --input: hsl(217 33% 17%);
+  --ring: hsl(142 71% 45%);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+}
+
+/* Game-specific base styles */
 * {
   margin: 0;
   padding: 0;
@@ -8,7 +62,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #1a1a2e;
+  background: hsl(222 47% 11%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -35,7 +89,6 @@ html, body {
   pointer-events: auto;
 }
 
-/* Zone overlay animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -50,9 +103,4 @@ html, body {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }

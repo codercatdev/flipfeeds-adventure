@@ -6,6 +6,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import { AvatarPicker } from '../components/AvatarPicker';
+import { ChatSheet } from '../components/ChatSheet';
 import { UserInfoHUD } from '../components/UserInfoHUD';
 import { LoginScreen } from '../components/LoginScreen';
 import { eventBus } from '@flipfeeds/game-client/events';
@@ -125,6 +126,7 @@ export default function Home() {
       </div>
       <div id="ui-overlay">
         <ZoneManager />
+        <ChatSheet playerName={session?.user?.name || 'Player'} />
         <UserInfoHUD
           userName={session?.user?.name || 'Player'}
           avatarConfig={session?.user?.avatarConfig || { characterType: 0, colorVariant: 0 }}
