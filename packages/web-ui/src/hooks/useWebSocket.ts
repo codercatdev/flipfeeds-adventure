@@ -48,7 +48,7 @@ export function useWebSocket({
     const socket = new PartySocket({
       host,
       room,
-      query: token ? { token } : { name: playerName },
+      query: { ...(token ? { token } : {}), name: playerName },
     });
 
     socketRef.current = socket;
