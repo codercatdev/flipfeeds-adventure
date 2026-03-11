@@ -19,3 +19,4 @@ export type {
   PoolStats,
 } from './events';
 export * from './zones';
+export * from './avatar';
