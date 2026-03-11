@@ -6,8 +6,8 @@ async function getAuth(): Promise<ReturnType<typeof createAuth> | null> {
   if (auth) return auth;
   try {
     const { env } = await import('cloudflare:workers');
-    if (!env?.flipfeeds_auth) return null;
-    auth = createAuth(env.flipfeeds_auth, env as Record<string, string | undefined>);
+    if (!env?.flipfeeds_db) return null;
+    auth = createAuth(env.flipfeeds_db, env as Record<string, string | undefined>);
     return auth;
   } catch (e) {
     console.error('[auth] getAuth failed:', e);

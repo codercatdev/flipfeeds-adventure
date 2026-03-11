@@ -1,5 +1,5 @@
--- FlipFeeds Auth Schema for Cloudflare D1
--- Run with: wrangler d1 execute <db-name> --remote --file=packages/auth/src/d1-schema.sql
+-- FlipFeeds Auth Schema for Cloudflare D1 (database: flipfeeds-db)
+-- From repo root: npx wrangler d1 execute flipfeeds-db --remote --file=packages/auth/src/d1-schema.sql --config packages/web-ui/wrangler.jsonc
 
 -- Core better-auth tables
 

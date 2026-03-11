@@ -1,36 +1,43 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flipfeeds-adventure",
-  "compatibility_date": "2025-03-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "vinext/server/app-router-entry",
-  "assets": {
-    "directory": "dist/client",
-    "not_found_handling": "single-page-application"
-  },
-  "d1_databases": [
-    {
-      "binding": "flipfeeds_auth",
-      "database_name": "flipfeeds-auth",
-      "database_id": "49a4c485-6bed-4722-8d38-40a37efd66c8"
-    }
-  ],
-  // @flipfeeds/auth — set via: wrangler secret put <NAME>
-  // Required: BETTER_AUTH_SECRET (min 32 chars, e.g. openssl rand -base64 32)
-  // OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and/or GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
-  "observability": {
-    "enabled": false,
-    "head_sampling_rate": 1,
-    "logs": {
-      "enabled": true,
-      "head_sampling_rate": 1,
-      "persist": true,
-      "invocation_logs": true
-    },
-    "traces": {
-      "enabled": false,
-      "persist": true,
-      "head_sampling_rate": 1
-    }
-  },
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "flipfeeds-adventure",
+	"compatibility_date": "2025-03-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "vinext/server/app-router-entry",
+	"assets": {
+		"directory": "dist/client",
+		"not_found_handling": "single-page-application"
+	},
+	"d1_databases": [
+		{
+			"binding": "flipfeeds_db",
+			"database_name": "flipfeeds-db",
+			"database_id": "e0ada96d-44ff-47ad-bd9d-95039ceb2748",
+			"remote": true
+		}
+	],
+	// 1. Delete old DB "flipfeeds-auth" in Cloudflare dashboard (D1).
+	// 2. Run: cd packages/web-ui && npx wrangler d1 create flipfeeds-db --config wrangler.jsonc
+	// 3. Replace database_id above with the UUID from step 2 output.
+	// 4. Run migration: npx wrangler d1 execute flipfeeds-db --remote --file=packages/auth/src/d1-schema.sql --config wrangler.jsonc
+	// @flipfeeds/auth — set via: wrangler secret put <NAME>
+	// Required: BETTER_AUTH_SECRET (min 32 chars, e.g. openssl rand -base64 32)
+	// OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and/or GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+	"observability": {
+		"enabled": false,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true,
+			"invocation_logs": true
+		},
+		"traces": {
+			"enabled": false,
+			"persist": true,
+			"head_sampling_rate": 1
+		}
+	},
 }
