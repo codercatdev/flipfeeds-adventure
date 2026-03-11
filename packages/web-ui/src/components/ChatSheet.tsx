@@ -9,6 +9,7 @@ import { eventBus } from '@flipfeeds/game-client/events';
 interface ChatMessage {
   id: string;
   playerId: string;
+  playerName: string;
   message: string;
   timestamp: number;
 }
@@ -35,10 +36,11 @@ export function ChatSheet({ playerName = 'Player' }: ChatSheetProps) {
 
   // Listen for incoming chat messages
   useEffect(() => {
-    const handleChatReceived = (data: { playerId: string; message: string; x: number; y: number }) => {
+    const handleChatReceived = (data: { playerId: string; message: string; name?: string; x: number; y: number }) => {
       setMessages(prev => [...prev, {
         id: `${data.playerId}-${Date.now()}`,
         playerId: data.playerId,
+        playerName: data.name || data.playerId.slice(0, 8),
         message: data.message,
         timestamp: Date.now(),
       }]);
@@ -72,9 +74,11 @@ export function ChatSheet({ playerName = 'Player' }: ChatSheetProps) {
     eventBus.emit('SEND_CHAT', { message: text });
 
     // Add to local messages immediately (optimistic)
+    // Server excludes sender from broadcasts, so this is the only way we see our own message
     setMessages(prev => [...prev, {
       id: `self-${Date.now()}`,
       playerId: 'self',
+      playerName: playerName,
       message: text,
       timestamp: Date.now(),
     }]);
@@ -138,7 +142,7 @@ export function ChatSheet({ playerName = 'Player' }: ChatSheetProps) {
             >
               {msg.playerId !== 'self' && (
                 <span className="text-xs font-medium text-primary block mb-1">
-                  {msg.playerId.slice(0, 8)}
+                  {msg.playerName}
                 </span>
               )}
               {msg.message}

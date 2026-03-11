@@ -11,6 +11,7 @@ interface UseWebSocketOptions {
   host: string;
   room?: string;
   playerName?: string;
+  token?: string;  // auth session token
 }
 
 interface UseWebSocketReturn {
@@ -29,6 +30,7 @@ export function useWebSocket({
   host,
   room = 'main',
   playerName = 'Anonymous',
+  token,
 }: UseWebSocketOptions): UseWebSocketReturn {
   const socketRef = useRef<PartySocket | null>(null);
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
@@ -46,7 +48,7 @@ export function useWebSocket({
     const socket = new PartySocket({
       host,
       room,
-      query: { name: playerName },
+      query: token ? { token } : { name: playerName },
     });
 
     socketRef.current = socket;
@@ -84,6 +86,7 @@ export function useWebSocket({
               y: p.y,
               direction: p.dir,
               name: p.name ?? 'Anonymous',
+              avatarConfig: p.avatarConfig,
             });
           }
           break;
@@ -98,6 +101,7 @@ export function useWebSocket({
             y: p.y,
             direction: p.dir,
             name: p.name ?? 'Anonymous',
+            avatarConfig: p.avatarConfig,
           });
           break;
         }
@@ -134,6 +138,7 @@ export function useWebSocket({
           eventBus.emit('CHAT_RECEIVED', {
             playerId: msg.id,
             message: msg.text,
+            name: msg.name,
             x: pos.x,
             y: pos.y,
           });
@@ -221,6 +226,7 @@ export function useWebSocket({
           direction: p.dir,
           name: p.name,
           anim: p.anim,
+          avatarConfig: p.avatarConfig,
         })),
       });
     };
@@ -247,7 +253,7 @@ export function useWebSocket({
       playerPositions.clear();
       socket.close();
     };
-  }, [host, room, playerName]);
+  }, [host, room, playerName, token]);
 
   return { status, playerId, latency };
 }
