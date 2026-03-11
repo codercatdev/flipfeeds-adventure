@@ -31,7 +31,20 @@ export class SpritePool {
   /** Acquire a sprite for a player. Reuses from pool or creates new. */
   acquire(playerId: string, x: number, y: number, name?: string, avatarConfig?: AvatarConfig): PooledSprite {
     const existing = this.activeMap.get(playerId);
-    if (existing) return existing;
+    if (existing) {
+      // Update avatar if a new config was provided (sprite may have been
+      // created with defaults before the real avatar data arrived)
+      if (avatarConfig && JSON.stringify(avatarConfig) !== JSON.stringify(existing.avatarConfig)) {
+        existing.avatarConfig = avatarConfig;
+        const frames = getAvatarFrames(avatarConfig);
+        existing.sprite.setFrame(frames.idleDown);
+      }
+      // Update name if provided
+      if (name) {
+        existing.label.setText(name);
+      }
+      return existing;
+    }
 
     let entry = this.pool.find(s => !s.active);
 
