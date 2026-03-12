@@ -64,6 +64,9 @@ export type GameEvents = {
   PLAYER_MOVED: { id: string; x: number; y: number; direction: Direction; anim?: string };
   CHAT_RECEIVED: { playerId: string; message: string; x: number; y: number };
 
+  // Mobile touch controls -> Phaser
+  MOBILE_DIRECTION: { up: boolean; down: boolean; left: boolean; right: boolean };
+
   // Client -> Server
   CONNECT: { url: string };
   DISCONNECT: void;

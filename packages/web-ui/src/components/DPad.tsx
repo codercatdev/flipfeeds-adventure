@@ -2,30 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
-
-// Map d-pad directions to keyboard key codes that Phaser reads
-const KEY_MAP = {
-  up: 'ArrowUp',
-  down: 'ArrowDown',
-  left: 'ArrowLeft',
-  right: 'ArrowRight',
-} as const;
-
-function simulateKey(key: string, type: 'keydown' | 'keyup') {
-  const event = new KeyboardEvent(type, {
-    key,
-    code: key,
-    bubbles: true,
-    cancelable: true,
-  });
-  // Dispatch on the canvas element so Phaser's keyboard manager picks it up
-  const canvas = document.querySelector('canvas');
-  if (canvas) {
-    canvas.dispatchEvent(event);
-  } else {
-    document.dispatchEvent(event);
-  }
-}
+import { eventBus } from '@flipfeeds/game-client/events';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -39,36 +16,38 @@ export function DPad() {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  const handlePress = useCallback((dir: Direction) => {
-    if (!activeDirections.current.has(dir)) {
-      activeDirections.current.add(dir);
-      simulateKey(KEY_MAP[dir], 'keydown');
-      setPressed(new Set(activeDirections.current));
-    }
+  const emitDirection = useCallback(() => {
+    const dirs = activeDirections.current;
+    eventBus.emit('MOBILE_DIRECTION', {
+      up: dirs.has('up'),
+      down: dirs.has('down'),
+      left: dirs.has('left'),
+      right: dirs.has('right'),
+    });
   }, []);
+
+  const handlePress = useCallback((dir: Direction) => {
+    activeDirections.current.add(dir);
+    setPressed(new Set(activeDirections.current));
+    emitDirection();
+  }, [emitDirection]);
 
   const handleRelease = useCallback((dir: Direction) => {
-    if (activeDirections.current.has(dir)) {
-      activeDirections.current.delete(dir);
-      simulateKey(KEY_MAP[dir], 'keyup');
-      setPressed(new Set(activeDirections.current));
-    }
-  }, []);
+    activeDirections.current.delete(dir);
+    setPressed(new Set(activeDirections.current));
+    emitDirection();
+  }, [emitDirection]);
 
   const handleReleaseAll = useCallback(() => {
-    for (const dir of activeDirections.current) {
-      simulateKey(KEY_MAP[dir], 'keyup');
-    }
     activeDirections.current.clear();
     setPressed(new Set());
+    eventBus.emit('MOBILE_DIRECTION', { up: false, down: false, left: false, right: false });
   }, []);
 
-  // Release all keys when component unmounts or touch is cancelled
+  // Release all on unmount
   useEffect(() => {
     return () => {
-      for (const dir of activeDirections.current) {
-        simulateKey(KEY_MAP[dir], 'keyup');
-      }
+      eventBus.emit('MOBILE_DIRECTION', { up: false, down: false, left: false, right: false });
     };
   }, []);
 
@@ -83,7 +62,7 @@ export function DPad() {
 
   return (
     <div
-      className="fixed bottom-24 left-6 z-50 pointer-events-auto touch-none select-none"
+      className="fixed bottom-24 right-6 z-50 pointer-events-auto touch-none select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* D-pad grid layout */}
@@ -134,14 +113,17 @@ export function DPad() {
         <div />
       </div>
 
-      {/* Action buttons on the right side */}
-      <div className="absolute -right-20 bottom-8 flex flex-col gap-2">
+      {/* Action buttons on the left side */}
+      <div className="absolute -left-20 bottom-8 flex flex-col gap-2">
         <button
           className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/30 text-white/80 text-xs font-bold select-none active:bg-primary/50"
           onTouchStart={(e) => {
             e.preventDefault();
-            simulateKey('e', 'keydown');
-            setTimeout(() => simulateKey('e', 'keyup'), 100);
+            // Simulate E key press for interact
+            const canvas = document.querySelector('canvas');
+            const target = canvas || document;
+            target.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', code: 'KeyE', bubbles: true }));
+            setTimeout(() => target.dispatchEvent(new KeyboardEvent('keyup', { key: 'e', code: 'KeyE', bubbles: true })), 100);
           }}
         >
           E
@@ -150,8 +132,11 @@ export function DPad() {
           className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/30 text-white/80 text-xs font-bold select-none active:bg-blue-500/50"
           onTouchStart={(e) => {
             e.preventDefault();
-            simulateKey('t', 'keydown');
-            setTimeout(() => simulateKey('t', 'keyup'), 100);
+            // Simulate T key press for chat
+            const canvas = document.querySelector('canvas');
+            const target = canvas || document;
+            target.dispatchEvent(new KeyboardEvent('keydown', { key: 't', code: 'KeyT', bubbles: true }));
+            setTimeout(() => target.dispatchEvent(new KeyboardEvent('keyup', { key: 't', code: 'KeyT', bubbles: true })), 100);
           }}
         >
           T

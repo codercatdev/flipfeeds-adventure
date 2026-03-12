@@ -29,6 +29,7 @@ export class GameScene extends Phaser.Scene {
     D: Phaser.Input.Keyboard.Key;
   };
   private inputPaused = false;
+  private mobileDirection = { up: false, down: false, left: false, right: false };
 
   // Map
   private map!: Phaser.Tilemaps.Tilemap;
@@ -324,10 +325,10 @@ export class GameScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    const up = this.cursors.up.isDown || this.wasd.W.isDown;
-    const down = this.cursors.down.isDown || this.wasd.S.isDown;
-    const left = this.cursors.left.isDown || this.wasd.A.isDown;
-    const right = this.cursors.right.isDown || this.wasd.D.isDown;
+    const up = this.cursors.up.isDown || this.wasd.W.isDown || this.mobileDirection.up;
+    const down = this.cursors.down.isDown || this.wasd.S.isDown || this.mobileDirection.down;
+    const left = this.cursors.left.isDown || this.wasd.A.isDown || this.mobileDirection.left;
+    const right = this.cursors.right.isDown || this.wasd.D.isDown || this.mobileDirection.right;
 
     if (up) vy -= 1;
     if (down) vy += 1;
@@ -609,6 +610,11 @@ export class GameScene extends Phaser.Scene {
         this.input.keyboard.resetKeys();
       }
       console.log('[GameScene] Input resumed — keyboard recaptured');
+    });
+
+    // Mobile touch D-pad
+    eventBus.on('MOBILE_DIRECTION', (dir: { up: boolean; down: boolean; left: boolean; right: boolean }) => {
+      this.mobileDirection = dir;
     });
 
     // Multiplayer connection

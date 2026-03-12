@@ -114,8 +114,8 @@ export default function Home() {
     return <LoginScreen onSignIn={signIn} />;
   }
 
-  // Show avatar picker on first visit (no avatar saved) or when explicitly opened
-  if (!hasAvatar || showPicker) {
+  // Show avatar picker on first visit (no avatar saved yet) — full screen, game not mounted
+  if (!hasAvatar && !showPicker) {
     return (
       <AvatarPicker
         onSelect={handleAvatarSelect}
@@ -143,6 +143,21 @@ export default function Home() {
         <ConnectionStatus wsStatus={wsStatus} latency={latency} playerId={playerId} />
         <DPad />
       </div>
+      {/* Avatar picker as overlay — game stays mounted underneath */}
+      {showPicker && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 2000,
+          background: 'rgba(0, 0, 0, 0.85)',
+        }}>
+          <AvatarPicker
+            onSelect={handleAvatarSelect}
+            initialType={session?.user?.avatarConfig?.characterType}
+            initialVariant={session?.user?.avatarConfig?.colorVariant}
+          />
+        </div>
+      )}
     </>
   );
 }
