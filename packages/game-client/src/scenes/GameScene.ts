@@ -137,8 +137,13 @@ export class GameScene extends Phaser.Scene {
 
   private createTilemap(): void {
     this.map = this.make.tilemap({ key: this.currentRoom });
+    // Try both tileset names — some tilemaps use '_trans' suffix, some don't.
+    // The Phaser cache key is always 'oryx_16bit_scifi_world' (set in BootScene).
     const tileset = this.map.addTilesetImage(
       'oryx_16bit_scifi_world',
+      'oryx_16bit_scifi_world',
+    ) || this.map.addTilesetImage(
+      'oryx_16bit_scifi_world_trans',
       'oryx_16bit_scifi_world',
     );
 
