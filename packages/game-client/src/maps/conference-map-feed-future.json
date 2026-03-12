@@ -19667,11 +19667,11 @@
     {
       "columns": 35,
       "firstgid": 1,
-      "image": "oryx_16bit_scifi_world_trans.png",
+      "image": "oryx_16bit_scifi_world.png",
       "imageheight": 984,
       "imagewidth": 840,
       "margin": 0,
-      "name": "oryx_16bit_scifi_world_trans",
+      "name": "oryx_16bit_scifi_world",
       "spacing": 0,
       "tilecount": 1435,
       "tileheight": 24,
