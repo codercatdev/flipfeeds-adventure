@@ -11,6 +11,7 @@ import { VideoDialog } from '../components/VideoDialog';
 import { UserInfoHUD } from '../components/UserInfoHUD';
 import { LoginScreen } from '../components/LoginScreen';
 import { eventBus } from '@flipfeeds/game-client/events';
+import { DPad } from '../components/DPad';
 
 // Dynamic import Phaser (it needs window/document)
 const GameCanvas = dynamic(() => import('../components/GameCanvas'), {
@@ -140,6 +141,7 @@ export default function Home() {
           onSignOut={signOut}
         />
         <ConnectionStatus wsStatus={wsStatus} latency={latency} playerId={playerId} />
+        <DPad />
       </div>
     </>
   );
