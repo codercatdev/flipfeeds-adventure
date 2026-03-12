@@ -72,13 +72,14 @@ describe('Tilemap — Layer Structure', () => {
     'Walls',
     'Decorations',
     'AbovePlayer',
+    'Markers',
     'InteractionZones',
     'SpawnPoints',
   ];
 
-  it('has exactly 6 layers', () => {
+  it('has exactly 7 layers', () => {
     expect(tilemap.layers).toBeDefined();
-    expect(tilemap.layers.length).toBe(6);
+    expect(tilemap.layers.length).toBe(7);
   });
 
   it('layers are in the correct order', () => {

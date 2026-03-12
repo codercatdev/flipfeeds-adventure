@@ -3,11 +3,14 @@ import eventBus from '../EventBus';
 import type { Direction, ZoneType, AvatarConfig } from '@flipfeeds/shared';
 import { getAvatarFrames, DEFAULT_AVATAR } from '@flipfeeds/shared';
 import { NetworkManager } from '../multiplayer/NetworkManager';
-import { ZONE_COLORS, getZonePromptText, getIdleDirection } from '../utils';
 
-// Movement speed in pixels per second
-const PLAYER_SPEED = 168;
-const DIAGONAL_FACTOR = 1 / Math.SQRT2; // ~0.707
+// Grid movement constants
+const TILE_SIZE = 24;
+const MOVE_DURATION = 143; // ms per tile (7 tiles/sec)
+const BUMP_DISTANCE = 6; // px for bump animation
+const BUMP_DURATION = 100; // ms for bump bounce
+const MARKER_TILE_IDS = new Set([117]); // red marker tiles
+const BUMP_COOLDOWN = 1000; // ms cooldown per zone after interaction
 
 export class GameScene extends Phaser.Scene {
   // Player
@@ -42,22 +45,15 @@ export class GameScene extends Phaser.Scene {
   }[] = [];
   private activeZones: Set<string> = new Set();
 
-  // Zone proximity tracking
-  private proximityTimer = 0;
-  private readonly PROXIMITY_INTERVAL = 100; // 10Hz
+  // Grid movement state
+  private isMoving = false;
+  private moveQueue: Direction | null = null;
+  private markersLayer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private bumpCooldowns: Map<string, number> = new Map();
 
   // Debug overlay
   private debugGraphics: Phaser.GameObjects.Graphics | null = null;
   private debugVisible = false;
-
-  // Zone interaction cues
-  private zoneHighlights: Map<string, Phaser.GameObjects.Graphics> = new Map();
-  private zonePrompts: Map<string, Phaser.GameObjects.Text> = new Map();
-  private pulseTimer = 0;
-
-  // Interaction key
-  private interactKey!: Phaser.Input.Keyboard.Key;
-  private chatKey!: Phaser.Input.Keyboard.Key;
 
   // FPS tracking
   private fpsHistory: number[] = [];
@@ -109,28 +105,10 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.trackFPS(delta);
-
-    if (this.inputPaused) {
-      this.playerBody.setVelocity(0, 0);
-      return;
-    }
-
+    if (this.inputPaused) return; // no velocity to zero — player is already on a tile
     this.handleMovement();
-
-    // Phase 3: Update remote player interpolation
     this.networkManager.updateRemotePlayers();
-
-    // Phase 4: Zone exit detection
     this.checkZoneExits();
-
-    // Phase 4: Proximity events (throttled to 10Hz)
-    this.updateProximity(delta);
-
-    // Phase 4: Interaction key checks
-    this.checkInteractions();
-
-    // Phase 5: Zone interaction cues
-    this.updateZoneCues(delta);
   }
 
   // ==========================================
@@ -159,6 +137,14 @@ export class GameScene extends Phaser.Scene {
       // Every non-empty tile on Walls layer is a collider
       wallsLayer.setCollisionByExclusion([-1, 0]);
       this.wallsLayer = wallsLayer;
+    }
+
+    // Markers layer (red interaction markers — may not exist yet in tilemap)
+    const markersLayer = this.map.createLayer('Markers', tileset, 0, 0);
+    if (markersLayer) {
+      markersLayer.setDepth(1.5);
+      markersLayer.setCollisionByExclusion([-1, 0]);
+      this.markersLayer = markersLayer;
     }
 
     const decorLayer = this.map.createLayer('Decorations', tileset, 0, 0);
@@ -202,6 +188,10 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Snap spawn position to tile grid
+    spawnX = Math.floor(spawnX / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+    spawnY = Math.floor(spawnY / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+
     // Animated player sprite from Oryx creatures spritesheet
     this.player = this.add.sprite(spawnX, spawnY, 'creatures', 416);
     this.player.setDepth(3);
@@ -209,19 +199,14 @@ export class GameScene extends Phaser.Scene {
     // Create walk animations
     this.createPlayerAnimations();
 
+    // Keep physics body for zone overlap detection (no velocity/colliders — grid movement is tween-based)
     this.physics.add.existing(this.player);
     this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-    this.playerBody.setCollideWorldBounds(true);
     // Physics body: 16×16 centered at bottom of 24×24 sprite
     this.playerBody.setSize(16, 16);
     this.playerBody.setOffset(4, 8);
 
-    // Add collision with walls
-    if (this.wallsLayer) {
-      this.physics.add.collider(this.player, this.wallsLayer);
-    }
-
-    console.log(`[GameScene] Player spawned at (${spawnX}, ${spawnY})`);
+    console.log(`[GameScene] Player spawned at (${spawnX}, ${spawnY}) [grid-snapped]`);
 
     // Emit initial position for React UI / E2E tests
     eventBus.emit('PLAYER_POSITION', {
@@ -309,9 +294,6 @@ export class GameScene extends Phaser.Scene {
       D: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-    this.chatKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
-
     // F9 debug toggle
     const f9Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F9);
     f9Key.on('down', () => {
@@ -321,75 +303,198 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private handleMovement(): void {
-    let vx = 0;
-    let vy = 0;
+  // ==========================================
+  // GRID MOVEMENT
+  // ==========================================
 
+  private handleMovement(): void {
     const up = this.cursors.up.isDown || this.wasd.W.isDown || this.mobileDirection.up;
     const down = this.cursors.down.isDown || this.wasd.S.isDown || this.mobileDirection.down;
     const left = this.cursors.left.isDown || this.wasd.A.isDown || this.mobileDirection.left;
     const right = this.cursors.right.isDown || this.wasd.D.isDown || this.mobileDirection.right;
 
-    if (up) vy -= 1;
-    if (down) vy += 1;
-    if (left) vx -= 1;
-    if (right) vx += 1;
-
-    // Determine direction
+    // 4-way only: priority order down > up > right > left (last pressed wins via key order)
     let direction: Direction = 'idle';
-    if (vx === 0 && vy === 0) {
-      direction = 'idle';
-    } else if (vx === 0 && vy < 0) {
-      direction = 'up';
-    } else if (vx === 0 && vy > 0) {
-      direction = 'down';
-    } else if (vx < 0 && vy === 0) {
-      direction = 'left';
-    } else if (vx > 0 && vy === 0) {
-      direction = 'right';
-    } else if (vx < 0 && vy < 0) {
-      direction = 'up-left';
-    } else if (vx > 0 && vy < 0) {
-      direction = 'up-right';
-    } else if (vx < 0 && vy > 0) {
-      direction = 'down-left';
-    } else if (vx > 0 && vy > 0) {
-      direction = 'down-right';
+    if (down) direction = 'down';
+    else if (up) direction = 'up';
+    else if (right) direction = 'right';
+    else if (left) direction = 'left';
+
+    if (direction === 'idle') {
+      this.moveQueue = null;
+      return;
     }
 
-    // Normalize diagonal speed
-    const isDiagonal = vx !== 0 && vy !== 0;
-    const speed = PLAYER_SPEED;
-
-    if (isDiagonal) {
-      vx *= speed * DIAGONAL_FACTOR;
-      vy *= speed * DIAGONAL_FACTOR;
-    } else {
-      vx *= speed;
-      vy *= speed;
+    if (this.isMoving) {
+      // Queue direction for auto-chain when current tween completes
+      this.moveQueue = direction;
+      return;
     }
 
-    this.playerBody.setVelocity(vx, vy);
+    this.tryMove(direction);
+  }
+
+  private tryMove(direction: Direction): void {
+    // Current tile coords from player position
+    const currentTileX = Math.floor(this.player.x / TILE_SIZE);
+    const currentTileY = Math.floor(this.player.y / TILE_SIZE);
+
+    // Target tile based on direction
+    let targetTileX = currentTileX;
+    let targetTileY = currentTileY;
+    switch (direction) {
+      case 'up': targetTileY -= 1; break;
+      case 'down': targetTileY += 1; break;
+      case 'left': targetTileX -= 1; break;
+      case 'right': targetTileX += 1; break;
+    }
+
+    // Bounds check
+    if (targetTileX < 0 || targetTileX >= this.map.width ||
+        targetTileY < 0 || targetTileY >= this.map.height) {
+      return; // Out of bounds — hard stop
+    }
+
+    // Check walls layer for collision tile at target
+    if (this.wallsLayer) {
+      const wallTile = this.wallsLayer.getTileAt(targetTileX, targetTileY);
+      if (wallTile && wallTile.index > 0) {
+        return; // Wall — hard stop
+      }
+    }
+
+    // Check markers layer for collision tile at target
+    if (this.markersLayer) {
+      const markerTile = this.markersLayer.getTileAt(targetTileX, targetTileY);
+      if (markerTile && MARKER_TILE_IDS.has(markerTile.index)) {
+        this.handleBump(direction, targetTileX, targetTileY);
+        return; // Marker — bump interaction
+      }
+    }
+
+    // Clear path — start move tween
+    const targetX = targetTileX * TILE_SIZE + TILE_SIZE / 2;
+    const targetY = targetTileY * TILE_SIZE + TILE_SIZE / 2;
+    this.startMoveTween(targetX, targetY, direction);
+  }
+
+  private startMoveTween(targetX: number, targetY: number, direction: Direction): void {
+    this.isMoving = true;
     this.currentDirection = direction;
-
-    // Play walk/idle animations
     this.updatePlayerAnimation(direction);
 
-    // Emit position to EventBus for React UI and server sync
-    if (direction !== 'idle') {
-      eventBus.emit('PLAYER_POSITION', {
-        x: this.player.x,
-        y: this.player.y,
-        direction: this.currentDirection,
-      });
+    this.tweens.add({
+      targets: this.player,
+      x: targetX,
+      y: targetY,
+      duration: MOVE_DURATION,
+      ease: 'Linear',
+      onComplete: () => {
+        this.isMoving = false;
 
-      // Send to server via EventBus → useWebSocket
-      eventBus.emit('SEND_POSITION', {
-        x: this.player.x,
-        y: this.player.y,
-        direction: this.currentDirection,
-      });
+        // Emit position on tile arrival (reduces network traffic to ~7/sec)
+        eventBus.emit('PLAYER_POSITION', {
+          x: this.player.x,
+          y: this.player.y,
+          direction,
+        });
+        eventBus.emit('SEND_POSITION', {
+          x: this.player.x,
+          y: this.player.y,
+          direction,
+        });
+
+        // Auto-chain: if key still held, continue moving
+        if (this.moveQueue) {
+          const nextDir = this.moveQueue;
+          this.moveQueue = null;
+          this.tryMove(nextDir);
+        } else {
+          // Check if keys are still held for auto-chain
+          this.handleMovement();
+        }
+      },
+    });
+  }
+
+  private handleBump(direction: Direction, markerTileX: number, markerTileY: number): void {
+    if (this.isMoving) return; // Don't bump while already moving
+
+    // Calculate bump offset (6px in the direction)
+    let bumpDx = 0;
+    let bumpDy = 0;
+    switch (direction) {
+      case 'up': bumpDy = -BUMP_DISTANCE; break;
+      case 'down': bumpDy = BUMP_DISTANCE; break;
+      case 'left': bumpDx = -BUMP_DISTANCE; break;
+      case 'right': bumpDx = BUMP_DISTANCE; break;
     }
+
+    const startX = this.player.x;
+    const startY = this.player.y;
+
+    this.isMoving = true;
+    this.currentDirection = direction;
+    this.updatePlayerAnimation(direction);
+
+    // Bump tween: move 6px toward target, then bounce back
+    this.tweens.add({
+      targets: this.player,
+      x: startX + bumpDx,
+      y: startY + bumpDy,
+      duration: BUMP_DURATION / 2,
+      ease: 'Quad.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        // Snap back to exact start position
+        this.player.x = startX;
+        this.player.y = startY;
+        this.isMoving = false;
+      },
+    });
+
+    // Look up zone: convert marker tile to world coords, check against zone rectangles
+    const markerWorldX = markerTileX * TILE_SIZE + TILE_SIZE / 2;
+    const markerWorldY = markerTileY * TILE_SIZE + TILE_SIZE / 2;
+
+    for (const { body: zone, data } of this.zones) {
+      const halfW = zone.width / 2;
+      const halfH = zone.height / 2;
+      const zoneLeft = zone.x - halfW;
+      const zoneRight = zone.x + halfW;
+      const zoneTop = zone.y - halfH;
+      const zoneBottom = zone.y + halfH;
+
+      if (markerWorldX >= zoneLeft && markerWorldX <= zoneRight &&
+          markerWorldY >= zoneTop && markerWorldY <= zoneBottom) {
+        // Found the zone — check cooldown
+        const now = Date.now();
+        const lastBump = this.bumpCooldowns.get(data.zoneId) ?? 0;
+        if (now - lastBump < BUMP_COOLDOWN) continue; // On cooldown
+
+        this.bumpCooldowns.set(data.zoneId, now);
+
+        if (data.zoneType === 'chat' || data.zoneType === 'webrtc') {
+          eventBus.emit('CHAT_OPEN', { zoneId: data.zoneId });
+          console.log(`[GameScene] Bump → CHAT_OPEN: ${data.zoneId}`);
+        } else if (data.zoneType === 'kiosk' || data.zoneType === 'info' || data.zoneType === 'video') {
+          eventBus.emit('ZONE_INTERACT', {
+            zoneType: data.zoneType as 'kiosk' | 'info' | 'video',
+            zoneId: data.zoneId,
+          });
+          console.log(`[GameScene] Bump → ZONE_INTERACT: ${data.zoneId} (${data.zoneType})`);
+        }
+        break; // Only interact with one zone per bump
+      }
+    }
+  }
+
+  private snapToGrid(): void {
+    if (!this.player) return;
+    const tileX = Math.round((this.player.x - TILE_SIZE / 2) / TILE_SIZE);
+    const tileY = Math.round((this.player.y - TILE_SIZE / 2) / TILE_SIZE);
+    this.player.x = tileX * TILE_SIZE + TILE_SIZE / 2;
+    this.player.y = tileY * TILE_SIZE + TILE_SIZE / 2;
   }
 
   private updatePlayerAnimation(direction: Direction): void {
@@ -404,8 +509,6 @@ export class GameScene extends Phaser.Scene {
       this.lastFacingDirection = direction;
     }
   }
-
-
 
   // ==========================================
   // CAMERA
@@ -514,12 +617,13 @@ export class GameScene extends Phaser.Scene {
 
     eventBus.on('PAUSE_INPUT', () => {
       this.inputPaused = true;
-      // Disable Phaser's keyboard plugin so keystrokes pass through to DOM (chat input, etc.)
+      this.tweens.killTweensOf(this.player);
+      this.isMoving = false;
+      this.moveQueue = null;
+      this.snapToGrid();
       if (this.input.keyboard) {
         this.input.keyboard.enabled = false;
       }
-      // Stop any current movement
-      this.playerBody?.setVelocity(0, 0);
       console.log('[GameScene] Input paused — keyboard released to DOM');
     });
 
@@ -547,6 +651,7 @@ export class GameScene extends Phaser.Scene {
       eventBus.off('AVATAR_SELECTED');
       eventBus.off('PAUSE_INPUT');
       eventBus.off('RESUME_INPUT');
+      eventBus.off('MOBILE_DIRECTION');
       eventBus.off('CONNECT');
       this.networkManager.destroy();
       console.log('[GameScene] Cleaned up event listeners');
@@ -585,8 +690,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
   }
-
-
 
   private renderDebugZones(): void {
     if (this.debugGraphics) {
@@ -663,10 +766,9 @@ export class GameScene extends Phaser.Scene {
   destroy(): void {
     if (this.networkManager) this.networkManager.destroy();
     if (this.debugGraphics) this.debugGraphics.destroy();
-    this.zoneHighlights.forEach(g => g.destroy());
-    this.zoneHighlights.clear();
-    this.zonePrompts.forEach(t => t.destroy());
-    this.zonePrompts.clear();
+    this.tweens.killTweensOf(this.player);
+    this.isMoving = false;
+    this.bumpCooldowns.clear();
     this.fpsHistory = [];
     this.zones = [];
     this.activeZones.clear();
