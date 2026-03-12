@@ -674,10 +674,13 @@ export class GameScene extends Phaser.Scene {
 
     // Room change — restart scene with new tilemap
     eventBus.on('ROOM_CHANGE', (data: { targetRoom: string; targetSpawn: string }) => {
-      console.log(`[GameScene] Room change to: ${data.targetRoom}`);
+      const roomKey = data.targetRoom.startsWith('conference-map-') 
+        ? data.targetRoom 
+        : `conference-map-${data.targetRoom}`;
+      console.log(`[GameScene] Room change to: ${roomKey}`);
       // Restart the scene with new room data
       this.scene.restart({
-        room: data.targetRoom,
+        room: roomKey,
         spawn: data.targetSpawn,
         avatarConfig: this.avatarConfig,
       });
