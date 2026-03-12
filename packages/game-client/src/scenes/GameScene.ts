@@ -145,6 +145,7 @@ export class GameScene extends Phaser.Scene {
       markersLayer.setDepth(1.5);
       markersLayer.setCollisionByExclusion([-1, 0]);
       this.markersLayer = markersLayer;
+      console.log(`[GameScene] Markers layer loaded: ${markersLayer.layer.data.flat().filter((t: { index: number }) => t.index > 0).length} non-empty tiles`);
     }
 
     const decorLayer = this.map.createLayer('Decorations', tileset, 0, 0);
@@ -359,6 +360,7 @@ export class GameScene extends Phaser.Scene {
     if (this.wallsLayer) {
       const wallTile = this.wallsLayer.getTileAt(targetTileX, targetTileY);
       if (wallTile && wallTile.index > 0) {
+        console.log(`[GameScene] Wall block at (${targetTileX},${targetTileY}): tile=${wallTile.index}`);
         return; // Wall — hard stop
       }
     }
@@ -366,10 +368,13 @@ export class GameScene extends Phaser.Scene {
     // Check markers layer for collision tile at target
     if (this.markersLayer) {
       const markerTile = this.markersLayer.getTileAt(targetTileX, targetTileY);
+      console.log(`[GameScene] Marker check at (${targetTileX},${targetTileY}): tile=${markerTile?.index ?? 'none'}, isMarker=${markerTile ? MARKER_TILE_IDS.has(markerTile.index) : false}`);
       if (markerTile && MARKER_TILE_IDS.has(markerTile.index)) {
         this.handleBump(direction, targetTileX, targetTileY);
         return; // Marker — bump interaction
       }
+    } else {
+      console.warn('[GameScene] No markersLayer loaded!');
     }
 
     // Clear path — start move tween
