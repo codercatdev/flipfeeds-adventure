@@ -74,7 +74,7 @@ export class GameScene extends Phaser.Scene {
       this.avatarConfig = initData.avatarConfig;
     }
     // Room name determines which tilemap to load (default: 'conference-map')
-    this.currentRoom = initData?.room || 'conference-map';
+    this.currentRoom = initData?.room || 'conference-map-social';
     this.targetSpawn = initData?.spawn || 'spawn-main';
 
     // === Build the world ===
