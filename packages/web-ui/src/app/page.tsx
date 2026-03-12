@@ -61,10 +61,20 @@ function getPartyKitHost(): string {
 export default function Home() {
   const { session, sessionToken, isPending, isAuthenticated, hasAvatar, updateAvatar, signIn, signOut } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
+  const [currentRoom, setCurrentRoom] = useState('social'); // Start in Social Hub (spawn room)
+
+  // Listen for room changes from portal transitions
+  useEffect(() => {
+    const onRoomChange = (data: { targetRoom: string; targetSpawn: string }) => {
+      setCurrentRoom(data.targetRoom);
+    };
+    eventBus.on('ROOM_CHANGE', onRoomChange);
+    return () => { eventBus.off('ROOM_CHANGE', onRoomChange); };
+  }, []);
 
   const { status: wsStatus, latency, playerId, forceLogout } = useWebSocket({
     host: getPartyKitHost(),
-    room: 'main',
+    room: currentRoom,
     playerName: session?.user?.name || 'Player',
     token: sessionToken ?? undefined,
     enabled: isAuthenticated && !isPending,
