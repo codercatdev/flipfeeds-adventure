@@ -68,6 +68,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // === Reset state on scene restart ===
+    this.inputPaused = false;
+    this.isMoving = false;
+    this.moveQueue = null;
+    this.zones = [];
+    this.activeZones = new Set();
+    this.bumpCooldowns = new Map();
+    this.mobileDirection = { up: false, down: false, left: false, right: false };
+    this.markersLayer = null;
+
     // === Check for initial avatar config (passed via scene data or EventBus) ===
     const initData = this.scene.settings.data as { avatarConfig?: AvatarConfig; room?: string; spawn?: string } | undefined;
     if (initData?.avatarConfig) {
