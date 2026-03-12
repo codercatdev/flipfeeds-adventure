@@ -1,0 +1,27 @@
+name: Deploy PartyKit
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/multiplayer-server/**', 'packages/shared/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy PartyKit
+        run: npx partykit deploy
+        working-directory: packages/multiplayer-server
+        env:
+          PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
