@@ -104,7 +104,9 @@ export class GameScene extends Phaser.Scene {
     // but this.scene isn't fully initialized until create() returns.
     queueMicrotask(() => {
       eventBus.emit('GAME_READY');
-      console.log('[GameScene] Created — GAME_READY emitted');
+      // Signal room is loaded — triggers overlay fade-out and server reconnect
+      eventBus.emit('ROOM_LOADED', { room: this.currentRoom });
+      console.log('[GameScene] Created — GAME_READY + ROOM_LOADED emitted');
     });
 
     // Fade in camera (smooth transition when entering a room)
