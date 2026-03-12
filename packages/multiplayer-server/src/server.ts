@@ -17,8 +17,8 @@ import { DEFAULT_AVATAR } from "@flipfeeds/shared";
 
 const MAX_SPEED = 168;
 const SPEED_TOLERANCE = 1.5;
-const MAP_WIDTH = 1920;
-const MAP_HEIGHT = 1440;
+const MAP_WIDTH = 1032;
+const MAP_HEIGHT = 2160;
 const PLAYER_HALF = 12;
 const DISCONNECT_TIMEOUT = 10_000;
 
@@ -175,8 +175,8 @@ export default class GameServer implements Party.Server {
     if (!player) {
       player = {
         id: userId,
-        x: 960 + (Math.random() * 96 - 48),
-        y: 1008 + (Math.random() * 96 - 48),
+        x: 516 + (Math.random() * 96 - 48),
+        y: 1080 + (Math.random() * 96 - 48),
         dir: "idle",
         anim: "idle",
         name: userName,
