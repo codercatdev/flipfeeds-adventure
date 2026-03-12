@@ -4,12 +4,15 @@ export type {
   ClientMoveMessage,
   ClientChatMessage,
   ClientPingMessage,
+  ClientAvatarUpdateMessage,
   ServerMessage,
   ServerWelcomeMessage,
   ServerSyncMessage,
   ServerPlayerJoinMessage,
   ServerPlayerLeaveMessage,
   ServerChatMessage,
+  ServerAvatarUpdateMessage,
+  ServerForceLogoutMessage,
   ServerPongMessage,
 } from './messages';
 export type {

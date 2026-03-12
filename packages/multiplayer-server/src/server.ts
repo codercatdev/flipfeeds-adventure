@@ -9,6 +9,8 @@ import type {
   ServerPlayerJoinMessage,
   ServerPlayerLeaveMessage,
   ServerChatMessage,
+  ServerAvatarUpdateMessage,
+  ServerForceLogoutMessage,
   ServerPongMessage,
 } from "@flipfeeds/shared";
 import { DEFAULT_AVATAR } from "@flipfeeds/shared";
@@ -147,6 +149,19 @@ export default class GameServer implements Party.Server {
     this.connToUser.set(conn.id, userId);
     this.playerNames.set(userId, userName);
 
+    // Force-logout any existing connections for this user (single-session enforcement)
+    for (const existingConn of this.room.getConnections()) {
+      if (existingConn.id !== conn.id) {
+        const existingUserId = this.connToUser.get(existingConn.id);
+        if (existingUserId === userId) {
+          existingConn.send(JSON.stringify({ type: "force-logout", reason: "Logged in from another location" }));
+          existingConn.close();
+          this.connToUser.delete(existingConn.id);
+          console.log("[Connect] Force-logged out duplicate connection for", userName, "connId:", existingConn.id);
+        }
+      }
+    }
+
     // Cancel any pending disconnect timer for this user
     const existingTimer = this.disconnectTimers.get(userId);
     if (existingTimer) {
@@ -268,6 +283,20 @@ export default class GameServer implements Party.Server {
         };
         // Exclude sender to prevent duplicate messages on the client
         this.room.broadcast(JSON.stringify(chatMsg), [sender.id]);
+        break;
+      }
+
+      case "avatar-update": {
+        const player = this.players.get(userId);
+        if (!player || !parsed.avatarConfig) break;
+        player.avatarConfig = parsed.avatarConfig;
+        console.log("[Avatar] Updated avatar for", this.playerNames.get(userId), "to", JSON.stringify(parsed.avatarConfig));
+        const updateMsg: ServerAvatarUpdateMessage = {
+          type: "avatar-update",
+          id: userId,
+          avatarConfig: parsed.avatarConfig,
+        };
+        this.room.broadcast(JSON.stringify(updateMsg), [sender.id]);
         break;
       }
     }
