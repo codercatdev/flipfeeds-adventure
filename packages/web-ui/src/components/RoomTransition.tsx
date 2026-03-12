@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { eventBus } from '@flipfeeds/game-client/events';
 
 const ROOM_NAMES: Record<string, string> = {
@@ -14,20 +14,32 @@ const ROOM_NAMES: Record<string, string> = {
 export function RoomTransition() {
   const [roomName, setRoomName] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const handler = (data: { targetRoom: string; targetSpawn: string }) => {
-      const name = ROOM_NAMES[data.targetRoom] || data.targetRoom;
+    const onRoomChange = (data: { targetRoom: string; targetSpawn: string; roomName?: string }) => {
+      // Clear any pending fade-out from a previous transition
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+
+      const name = data.roomName || ROOM_NAMES[data.targetRoom] || data.targetRoom;
       setRoomName(name);
       setVisible(true);
-
-      // Auto-hide after transition completes
-      setTimeout(() => setVisible(false), 1200);
-      setTimeout(() => setRoomName(null), 1600);
     };
 
-    eventBus.on('ROOM_CHANGE', handler);
-    return () => { eventBus.off('ROOM_CHANGE', handler); };
+    const onRoomLoaded = () => {
+      // New room is ready — fade out the overlay
+      setVisible(false);
+      fadeTimerRef.current = setTimeout(() => setRoomName(null), 400);
+    };
+
+    eventBus.on('ROOM_CHANGE', onRoomChange);
+    eventBus.on('ROOM_LOADED', onRoomLoaded);
+
+    return () => {
+      eventBus.off('ROOM_CHANGE', onRoomChange);
+      eventBus.off('ROOM_LOADED', onRoomLoaded);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    };
   }, []);
 
   if (!roomName) return null;
