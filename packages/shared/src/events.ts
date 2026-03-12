@@ -42,6 +42,7 @@ export type GameEvents = {
   ZONE_PROXIMITY: ZoneProximityPayload;
   ZONE_INTERACT: ZoneInteractPayload;
   CHAT_OPEN: { zoneId: string };
+  ROOM_CHANGE: { targetRoom: string; targetSpawn: string; roomName?: string };
 
   // Debug
   DEBUG_ZONES_TOGGLE: void;
@@ -66,6 +67,9 @@ export type GameEvents = {
 
   // Mobile touch controls -> Phaser
   MOBILE_DIRECTION: { up: boolean; down: boolean; left: boolean; right: boolean };
+
+  // Room transitions
+  ROOM_LOADED: { room: string };
 
   // Client -> Server
   CONNECT: { url: string };

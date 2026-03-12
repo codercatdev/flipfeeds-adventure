@@ -9,7 +9,7 @@ const TILE_SIZE = 24;
 const MOVE_DURATION = 143; // ms per tile (7 tiles/sec)
 const BUMP_DISTANCE = 6; // px for bump animation
 const BUMP_DURATION = 100; // ms for bump bounce
-const MARKER_TILE_IDS = new Set([117]); // red marker tiles
+const MARKER_TILE_IDS = new Set([117, 115]); // 117=red interaction, 115=teal portal
 const BUMP_COOLDOWN = 1000; // ms cooldown per zone after interaction
 
 export class GameScene extends Phaser.Scene {
@@ -19,6 +19,8 @@ export class GameScene extends Phaser.Scene {
   private currentDirection: Direction = 'idle';
   private avatarConfig: AvatarConfig = DEFAULT_AVATAR;
   private lastFacingDirection: 'down' | 'up' | 'left' | 'right' = 'down';
+  private currentRoom = 'conference-map';
+  private targetSpawn = 'spawn-main';
 
   // Multiplayer (Phase 3)
   private networkManager!: NetworkManager;
@@ -41,7 +43,7 @@ export class GameScene extends Phaser.Scene {
   // Interaction zones (prep for Phase 4)
   private zones: {
     body: Phaser.GameObjects.Zone;
-    data: { zoneType: string; zoneId: string; radius: number };
+    data: { zoneType: string; zoneId: string; radius: number; targetRoom?: string; targetSpawn?: string };
   }[] = [];
   private activeZones: Set<string> = new Set();
 
@@ -67,10 +69,13 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     // === Check for initial avatar config (passed via scene data or EventBus) ===
-    const initData = this.scene.settings.data as { avatarConfig?: AvatarConfig } | undefined;
+    const initData = this.scene.settings.data as { avatarConfig?: AvatarConfig; room?: string; spawn?: string } | undefined;
     if (initData?.avatarConfig) {
       this.avatarConfig = initData.avatarConfig;
     }
+    // Room name determines which tilemap to load (default: 'conference-map')
+    this.currentRoom = initData?.room || 'conference-map';
+    this.targetSpawn = initData?.spawn || 'spawn-main';
 
     // === Build the world ===
     this.createTilemap();
@@ -101,6 +106,9 @@ export class GameScene extends Phaser.Scene {
       eventBus.emit('GAME_READY');
       console.log('[GameScene] Created — GAME_READY emitted');
     });
+
+    // Fade in camera (smooth transition when entering a room)
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   update(_time: number, delta: number): void {
@@ -116,7 +124,7 @@ export class GameScene extends Phaser.Scene {
   // ==========================================
 
   private createTilemap(): void {
-    this.map = this.make.tilemap({ key: 'conference-map' });
+    this.map = this.make.tilemap({ key: this.currentRoom });
     const tileset = this.map.addTilesetImage(
       'oryx_16bit_scifi_world',
       'oryx_16bit_scifi_world',
@@ -181,6 +189,8 @@ export class GameScene extends Phaser.Scene {
 
     if (spawnLayer) {
       const spawnPoint = spawnLayer.objects.find(
+        (obj) => obj.name === this.targetSpawn,
+      ) || spawnLayer.objects.find(
         (obj) => obj.name === 'spawn-main',
       );
       if (spawnPoint) {
@@ -481,7 +491,16 @@ export class GameScene extends Phaser.Scene {
 
         this.bumpCooldowns.set(data.zoneId, now);
 
-        if (data.zoneType === 'chat' || data.zoneType === 'webrtc') {
+        if (data.zoneType === 'portal' && data.targetRoom) {
+          // Portal transition — emit ROOM_CHANGE for React/WebSocket layer
+          eventBus.emit('ROOM_CHANGE', {
+            targetRoom: data.targetRoom,
+            targetSpawn: data.targetSpawn || 'spawn-main',
+          });
+          console.log(`[GameScene] Bump → ROOM_CHANGE: ${data.targetRoom} (spawn: ${data.targetSpawn || 'spawn-main'})`);
+          // Fade out camera
+          this.cameras.main.fadeOut(300, 0, 0, 0);
+        } else if (data.zoneType === 'chat' || data.zoneType === 'webrtc') {
           eventBus.emit('CHAT_OPEN', { zoneId: data.zoneId });
           console.log(`[GameScene] Bump → CHAT_OPEN: ${data.zoneId}`);
         } else if (data.zoneType === 'kiosk' || data.zoneType === 'info' || data.zoneType === 'video') {
@@ -568,6 +587,8 @@ export class GameScene extends Phaser.Scene {
       const zoneType = (props['zoneType'] || props['type']) as string | undefined;
       const zoneId = (props['zoneId'] || props['id']) as string | undefined;
       const radius = (props['radius'] as number) || 2;
+      const targetRoom = props['targetRoom'] as string | undefined;
+      const targetSpawn = props['targetSpawn'] as string | undefined;
 
       if (!zoneType || !zoneId) continue;
 
@@ -580,7 +601,7 @@ export class GameScene extends Phaser.Scene {
       );
       this.physics.add.existing(zone, true); // static body
 
-      const zoneData = { zoneType, zoneId, radius };
+      const zoneData = { zoneType, zoneId, radius, targetRoom, targetSpawn };
       this.zones.push({ body: zone, data: zoneData });
 
       // Capture zoneId for the closure
@@ -649,6 +670,17 @@ export class GameScene extends Phaser.Scene {
       this.mobileDirection = dir;
     });
 
+    // Room change — restart scene with new tilemap
+    eventBus.on('ROOM_CHANGE', (data: { targetRoom: string; targetSpawn: string }) => {
+      console.log(`[GameScene] Room change to: ${data.targetRoom}`);
+      // Restart the scene with new room data
+      this.scene.restart({
+        room: data.targetRoom,
+        spawn: data.targetSpawn,
+        avatarConfig: this.avatarConfig,
+      });
+    });
+
     // Multiplayer connection
     eventBus.on('CONNECT', () => {
       console.log('[GameScene] Connected to server');
@@ -659,6 +691,7 @@ export class GameScene extends Phaser.Scene {
       eventBus.off('PAUSE_INPUT');
       eventBus.off('RESUME_INPUT');
       eventBus.off('MOBILE_DIRECTION');
+      eventBus.off('ROOM_CHANGE');
       eventBus.off('CONNECT');
       this.networkManager.destroy();
       console.log('[GameScene] Cleaned up event listeners');

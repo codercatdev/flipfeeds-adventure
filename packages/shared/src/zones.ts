@@ -4,7 +4,7 @@
  * and detected by Phaser physics overlap in GameScene.
  */
 
-export type ZoneType = 'chat' | 'kiosk' | 'video' | 'webrtc' | 'info';
+export type ZoneType = 'chat' | 'kiosk' | 'video' | 'webrtc' | 'info' | 'portal';
 
 export interface InteractionZone {
   /** Unique zone identifier (e.g., "water-cooler-main") */

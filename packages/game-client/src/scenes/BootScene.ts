@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
 
+declare const __BUILD_TIMESTAMP__: string;
+
+const ASSET_VERSION = typeof __BUILD_TIMESTAMP__ !== 'undefined'
+  ? __BUILD_TIMESTAMP__
+  : Date.now().toString();
+
+function assetUrl(path: string): string {
+  return `${path}?v=${ASSET_VERSION}`;
+}
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' });
@@ -35,11 +45,22 @@ export class BootScene extends Phaser.Scene {
     });
 
     // Load tilemap and Oryx world tileset
-    this.load.tilemapTiledJSON('conference-map', 'assets/maps/conference-map.json');
-    this.load.image('oryx_16bit_scifi_world', 'assets/tilesets/oryx_16bit_scifi_world_trans.png');
+    this.load.tilemapTiledJSON('conference-map', assetUrl('assets/maps/conference-map.json'));
+
+    // Multi-room tilemaps (loaded on demand — only conference-map exists initially)
+    // These will fail silently if the files don't exist yet
+    const rooms = ['lobby', 'feed-maker', 'social', 'feed-future', 'edit-bay'];
+    for (const room of rooms) {
+      this.load.tilemapTiledJSON(
+        `conference-map-${room}`,
+        assetUrl(`assets/maps/conference-map-${room}.json`),
+      );
+    }
+
+    this.load.image('oryx_16bit_scifi_world', assetUrl('assets/tilesets/oryx_16bit_scifi_world_trans.png'));
 
     // Load character spritesheet (24×24 frames, 32 columns × 41 rows = 1312 frames)
-    this.load.spritesheet('creatures', 'assets/tilesets/oryx_16bit_scifi_creatures_trans.png', {
+    this.load.spritesheet('creatures', assetUrl('assets/tilesets/oryx_16bit_scifi_creatures_trans.png'), {
       frameWidth: 24,
       frameHeight: 24,
     });

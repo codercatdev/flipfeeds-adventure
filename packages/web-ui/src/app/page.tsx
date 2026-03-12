@@ -12,6 +12,7 @@ import { UserInfoHUD } from '../components/UserInfoHUD';
 import { LoginScreen } from '../components/LoginScreen';
 import { eventBus } from '@flipfeeds/game-client/events';
 import { DPad } from '../components/DPad';
+import { RoomTransition } from '../components/RoomTransition';
 
 // Dynamic import Phaser (it needs window/document)
 const GameCanvas = dynamic(() => import('../components/GameCanvas'), {
@@ -139,6 +140,7 @@ export default function Home() {
         <GameCanvas />
       </div>
       <div id="ui-overlay">
+        <RoomTransition />
         <ZoneManager />
         <ChatSheet playerName={session?.user?.name || 'Player'} />
         <VideoDialog />
