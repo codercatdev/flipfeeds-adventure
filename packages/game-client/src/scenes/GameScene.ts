@@ -339,6 +339,7 @@ export class GameScene extends Phaser.Scene {
     // Current tile coords from player position
     const currentTileX = Math.floor(this.player.x / TILE_SIZE);
     const currentTileY = Math.floor(this.player.y / TILE_SIZE);
+    console.log(`[GameScene] tryMove ${direction} from tile (${currentTileX},${currentTileY}) px (${this.player.x},${this.player.y}), markersLayer=${!!this.markersLayer}, zones=${this.zones.length}`);
 
     // Target tile based on direction
     let targetTileX = currentTileX;
@@ -461,6 +462,7 @@ export class GameScene extends Phaser.Scene {
     // Look up zone: convert marker tile to world coords, check against zone rectangles
     const markerWorldX = markerTileX * TILE_SIZE + TILE_SIZE / 2;
     const markerWorldY = markerTileY * TILE_SIZE + TILE_SIZE / 2;
+    console.log(`[GameScene] handleBump: marker at tile (${markerTileX},${markerTileY}) world (${markerWorldX},${markerWorldY}), checking ${this.zones.length} zones`);
 
     for (const { body: zone, data } of this.zones) {
       const halfW = zone.width / 2;
