@@ -113,35 +113,7 @@ export function DPad() {
         <div />
       </div>
 
-      {/* Action buttons on the left side */}
-      <div className="absolute -left-20 bottom-8 flex flex-col gap-2">
-        <button
-          className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/30 text-white/80 text-xs font-bold select-none active:bg-primary/50"
-          onTouchStart={(e) => {
-            e.preventDefault();
-            // Simulate E key press for interact
-            const canvas = document.querySelector('canvas');
-            const target = canvas || document;
-            target.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', code: 'KeyE', bubbles: true }));
-            setTimeout(() => target.dispatchEvent(new KeyboardEvent('keyup', { key: 'e', code: 'KeyE', bubbles: true })), 100);
-          }}
-        >
-          E
-        </button>
-        <button
-          className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/30 text-white/80 text-xs font-bold select-none active:bg-blue-500/50"
-          onTouchStart={(e) => {
-            e.preventDefault();
-            // Simulate T key press for chat
-            const canvas = document.querySelector('canvas');
-            const target = canvas || document;
-            target.dispatchEvent(new KeyboardEvent('keydown', { key: 't', code: 'KeyT', bubbles: true }));
-            setTimeout(() => target.dispatchEvent(new KeyboardEvent('keyup', { key: 't', code: 'KeyT', bubbles: true })), 100);
-          }}
-        >
-          T
-        </button>
-      </div>
+      {/* Action buttons removed — bump-to-interact replaces E/T keys */}
     </div>
   );
 }
