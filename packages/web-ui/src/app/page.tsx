@@ -61,13 +61,21 @@ export default function Home() {
   const { session, sessionToken, isPending, isAuthenticated, hasAvatar, updateAvatar, signIn, signOut } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
 
-  const { status: wsStatus, latency, playerId } = useWebSocket({
+  const { status: wsStatus, latency, playerId, forceLogout } = useWebSocket({
     host: getPartyKitHost(),
     room: 'main',
     playerName: session?.user?.name || 'Player',
     token: sessionToken ?? undefined,
     enabled: isAuthenticated && !isPending,
   });
+
+  // Handle force-logout from another session
+  useEffect(() => {
+    if (forceLogout) {
+      alert('You have been logged out because you signed in from another location.');
+      signOut();
+    }
+  }, [forceLogout, signOut]);
 
   const handleAvatarSelect = useCallback(async (config: { characterType: number; colorVariant: number }) => {
     await updateAvatar(config);

@@ -19,6 +19,7 @@ interface UseWebSocketReturn {
   status: WebSocketStatus;
   playerId: string | null;
   latency: number;
+  forceLogout: boolean;
 }
 
 /**
@@ -38,6 +39,7 @@ export function useWebSocket({
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [latency, setLatency] = useState<number>(0);
+  const [forceLogout, setForceLogout] = useState(false);
   const seqRef = useRef(0);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerIdRef = useRef<string | null>(null);
@@ -161,6 +163,32 @@ export function useWebSocket({
           setLatency(rtt);
           break;
         }
+
+        case 'avatar-update': {
+          // Another player changed their avatar — update their sprite
+          const avatarMsg = msg as { type: string; id: string; avatarConfig: { characterType: number; colorVariant: number } };
+          if (avatarMsg.id && avatarMsg.avatarConfig) {
+            eventBus.emit('PLAYER_JOINED', {
+              id: avatarMsg.id,
+              x: playerPositions.get(avatarMsg.id)?.x ?? 0,
+              y: playerPositions.get(avatarMsg.id)?.y ?? 0,
+              direction: 'idle' as Direction,
+              name: '',
+              avatarConfig: avatarMsg.avatarConfig,
+            });
+          }
+          break;
+        }
+
+        case 'force-logout': {
+          // Another session took over — disconnect and notify
+          console.warn('[useWebSocket] Force logout:', (msg as { reason?: string }).reason);
+          socket.close();
+          eventBus.emit('DISCONNECT', undefined as never);
+          // Signal to React layer
+          setForceLogout(true);
+          break;
+        }
       }
     }
 
@@ -246,12 +274,22 @@ export function useWebSocket({
     eventBus.on('SEND_POSITION', handleSendPosition);
     eventBus.on('SEND_CHAT', handleSendChat);
 
+    // Send avatar updates to server for broadcast to other players
+    const handleAvatarUpdate = (config: { characterType: number; colorVariant: number }) => {
+      const s = socketRef.current;
+      if (s && s.readyState === WebSocket.OPEN) {
+        s.send(JSON.stringify({ type: 'avatar-update', avatarConfig: config }));
+      }
+    };
+    eventBus.on('AVATAR_SELECTED', handleAvatarUpdate);
+
     // ─── Cleanup ──────────────────────────────────────────────
 
     return () => {
       eventBus.off('GAME_READY', onGameReady);
       eventBus.off('SEND_POSITION', handleSendPosition);
       eventBus.off('SEND_CHAT', handleSendChat);
+      eventBus.off('AVATAR_SELECTED', handleAvatarUpdate);
       welcomeRef.current = null;
 
       if (pingIntervalRef.current) {
@@ -266,5 +304,5 @@ export function useWebSocket({
     };
   }, [host, room, playerName, enabled]);
 
-  return { status, playerId, latency };
+  return { status, playerId, latency, forceLogout };
 }
